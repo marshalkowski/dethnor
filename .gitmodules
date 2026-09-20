@@ -1,0 +1,3 @@
+[submodule "vendor/bengine"]
+	path = vendor/bengine
+	url = https://github.com/marshalkowski/bengine
