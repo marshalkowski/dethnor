@@ -13,6 +13,9 @@ add_subdirectory(vendor/Bengine)
 
 add_executable(dungeons-of-dethnor
     src/main.cpp
+    src/Room.cpp
+    src/Player.cpp
+    src/RoomCamera.cpp
 )
 
 target_link_libraries(dungeons-of-dethnor
@@ -25,10 +28,12 @@ target_include_directories(dungeons-of-dethnor
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# Bengine has no asset-loading/search-path concept yet, so (matching every
-# Bengine example) bake in the absolute path to our own asset directory at
-# compile time.
-target_compile_definitions(dungeons-of-dethnor
-    PRIVATE
-        DETHNOR_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+# Bengine E1 asset workflow (see vendor/Bengine's README.md and
+# examples/14_camera_basic): copy our own assets/ next to the built
+# executable so Engine::SetAssetRoot("assets") (called in main.cpp) resolves
+# to something, regardless of working directory or build config.
+add_custom_command(TARGET dungeons-of-dethnor POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:dungeons-of-dethnor>/assets"
 )
