@@ -85,4 +85,10 @@ RoomAssets LoadRoom(engine::Engine& app);
 // space only -- call between BeginCameraMode/EndCameraMode.
 void DrawRoom(engine::Engine& app, const RoomAssets& assets);
 
+// Clamps position to this room's navigable rectangle for a mover with the
+// given collision-box half-width and top-offset (see CharacterDefinition;
+// M1's Player used this same math inline before M2 generalized it to any
+// character, so both the Knight and the Skeleton respect the same walls).
+void ClampToRoom(engine::Vec2& position, float collisionHalfWidth, float collisionTopOffset);
+
 } // namespace dethnor

@@ -1,5 +1,7 @@
 #include "Room.hpp"
 
+#include <algorithm>
+
 namespace dethnor {
 
 RoomAssets LoadRoom(engine::Engine& app) {
@@ -28,6 +30,15 @@ void DrawRoom(engine::Engine& app, const RoomAssets& assets) {
 
     // No right side wall: has_right_wall is false for this zone in the
     // source data (see RoomConfig's comment on the room-selection tradeoff).
+}
+
+void ClampToRoom(engine::Vec2& position, float collisionHalfWidth, float collisionTopOffset) {
+    const float maxX = RoomConfig::width - collisionHalfWidth;
+    const float minY = RoomConfig::wallHeight + collisionTopOffset;
+    const float maxY = RoomConfig::floorY;
+    position.y = std::clamp(position.y, minY, maxY);
+    const float minX = RoomConfig::leftWallLineConstant - position.y + collisionHalfWidth + collisionTopOffset;
+    position.x = std::clamp(position.x, minX, maxX);
 }
 
 } // namespace dethnor
