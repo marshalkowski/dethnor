@@ -1,22 +1,60 @@
 #include "engine/Engine.hpp"
 
-#include "Character.hpp"
 #include "CharacterDefinition.hpp"
 #include "CombatSystem.hpp"
+#include "Hud.hpp"
+#include "LevelCamera.hpp"
+#include "LevelRuntime.hpp"
 #include "PlayerControl.hpp"
-#include "Room.hpp"
-#include "RoomCamera.hpp"
+#include "SessionState.hpp"
 #include "SkeletonAI.hpp"
+#include "TitleScreen.hpp"
 
-#include <string>
+#include <optional>
+#include <utility>
 
-// M2 (see MIGRATION_PLAN.md / the M2 report): the first complete combat
-// vertical slice -- Knight vs. one Skeleton in the M1 room, using Dethnor's
-// real directional-attack/block/damage/knockback/hit-stop/iframes rules and
-// a small utility-AI Skeleton (see the AI architecture proposal). See
-// Character.hpp/.cpp, ActionDefinition.hpp, CharacterDefinition.hpp,
-// CombatSystem.hpp/.cpp, SkeletonAI.hpp/.cpp, and PlayerControl.hpp/.cpp for
-// the ported systems and their source-of-truth citations.
+// M3 (see MIGRATION_PLAN.md / the M3 report): the real Dethnor gameplay
+// loop -- title/class-select -> gameplay, with real zones, gates, waves,
+// multiple enemies, zone/level progression, a real HUD, and death->title
+// flow, replacing M1/M2's single hardcoded room and single Skeleton. See
+// LevelDefinition.hpp/.cpp and LevelRuntime.hpp/.cpp for the level/zone/wave
+// architecture, SessionState.hpp for what survives a level transition, and
+// TitleScreen.hpp/.cpp + Hud.hpp/.cpp for the front end.
+
+namespace {
+
+// The app's own top-level state -- title_screen.tscn (which, per the M3
+// audit, already combines title display and class selection into one real
+// screen -- see TitleScreen.hpp) vs. level_runtime.tscn. Mirrors the
+// enum+optional+switch idiom Bengine's own prototypes use.
+enum class AppState { TitleScreen, Gameplay };
+
+// Everything owned only while actually playing -- torn down and rebuilt
+// fresh on every level transition or death, same as Godot reloading
+// level_runtime.tscn. deathTimer tracks level_runtime.gd's 1-second pause
+// before returning to title (the fade itself isn't implemented -- see the
+// M3 report).
+struct GameplaySession {
+    dethnor::LevelRuntime level;
+    dethnor::LevelCamera camera;
+    float deathTimer = -1.0f;
+};
+
+// Starts the camera already clamped to this level's own bounds (see
+// ClampCameraTargetX) rather than raw at the player's spawn position: an
+// unclamped start meant the very first UpdateLevelCamera call could slide
+// the camera in from an invalid position, briefly showing world space to
+// the left of x=0 where nothing is drawn -- see the M3 follow-up fix
+// thread.
+dethnor::LevelCamera MakeCameraForLevel(const dethnor::LevelRuntime& level) {
+    float minX = 0.0f;
+    float maxX = 0.0f;
+    dethnor::GetCameraBounds(level, minX, maxX);
+    const float startX = dethnor::ClampCameraTargetX(level.player.position.x, minX, maxX);
+    return dethnor::MakeLevelCamera({startX, 112.0f});
+}
+
+} // namespace
 
 int main() {
     // project.godot: viewport 1592x896 (398x224 native x4 stretch scale).
@@ -24,83 +62,97 @@ int main() {
 
     app.SetAssetRoot("assets");
 
-    const dethnor::RoomAssets roomAssets = dethnor::LoadRoom(app);
-
-    // Definitions must outlive every Character spawned from them (Character
-    // only stores a pointer to its definition).
+    // App-lifetime resources: loaded once, shared across every title visit
+    // and every level transition for the life of the process.
     const dethnor::CharacterDefinition knightDefinition = dethnor::MakeKnightDefinition();
     const dethnor::CharacterDefinition skeletonDefinition = dethnor::MakeSkeletonDefinition();
-
     const dethnor::CharacterAssets knightAssets = dethnor::LoadCharacterAssets(app, knightDefinition);
     const dethnor::CharacterAssets skeletonAssets = dethnor::LoadCharacterAssets(app, skeletonDefinition);
-
-    dethnor::Character knight =
-        dethnor::SpawnCharacter(knightDefinition, dethnor::RoomConfig::playerSpawn, dethnor::RoomConfig::playerSpawnFacing);
-
-    // No wave/spawn-point data is ported for M2 (out of scope -- see the M2
-    // report); a fixed in-room position stands in for it. base_character.gd
-    // turns an AI-controlled character to face the player at spawn.
-    dethnor::Character skeleton = dethnor::SpawnCharacter(skeletonDefinition, engine::Vec2{450.0f, 170.0f}, 1);
-    skeleton.facing = (knight.position.x < skeleton.position.x) ? -1 : 1;
-
+    const dethnor::HudAssets hudAssets = dethnor::LoadHudAssets(app);
+    const dethnor::TitleScreenAssets titleAssets = dethnor::LoadTitleScreenAssets(app);
     const dethnor::SkeletonAIDefinition skeletonAiDefinition{};
-    dethnor::SkeletonAIRuntime skeletonAi{};
 
-    dethnor::RoomCamera roomCamera = dethnor::MakeRoomCamera();
-    dethnor::CombatWorld combatWorld{};
+    // GameManager's real lifetime: a single instance for the whole process,
+    // never reset when returning to the title screen. This is a deliberate,
+    // verified reproduction of a genuine (if surprising) Godot behavior --
+    // neither death nor _exit_level() ever clears GameManager's cached
+    // destination/stats, so restarting after a death occurring after at
+    // least one prior level transition resumes from that stale cached
+    // destination rather than a fresh level-1 spawn. See the M3 report.
+    dethnor::SessionState session;
+
+    AppState state = AppState::TitleScreen;
+    std::optional<dethnor::TitleScreenState> titleScreen(dethnor::TitleScreenState{});
+    std::optional<GameplaySession> gameplay;
 
     while (!app.ShouldClose()) {
         const float dt = app.DeltaTime();
 
-        dethnor::UpdatePlayerControl(knight, app);
-        dethnor::UpdateSkeletonAI(skeleton, knight, skeletonAi, skeletonAiDefinition, dt);
+        switch (state) {
+        case AppState::TitleScreen:
+            if (dethnor::UpdateTitleScreen(*titleScreen, app, dt)) {
+                // class_selector.gd's accept handler: set_player_class,
+                // then load the level. Only player_class is overwritten
+                // here -- session.destination/cached stats are deliberately
+                // left as-is (see the SessionState comment above).
+                session.playerClass = dethnor::PlayerClass::Knight;
+                const dethnor::Destination start{1, 1, "ps0"};
+                const dethnor::Destination& destination = session.hasDestination ? session.destination : start;
+                dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, knightDefinition, app);
+                dethnor::LevelCamera camera = MakeCameraForLevel(level);
+                gameplay.emplace(GameplaySession{std::move(level), std::move(camera), -1.0f});
+                titleScreen.reset();
+                state = AppState::Gameplay;
+            }
+            break;
+        case AppState::Gameplay: {
+            GameplaySession& g = *gameplay;
 
-        dethnor::UpdateCharacter(knight, dt);
-        dethnor::UpdateCharacter(skeleton, dt);
+            if (g.level.player.state == dethnor::CombatState::Dead) {
+                // level_runtime.gd's _on_player_died: a 1-second pause (the
+                // corpse just lies there), then back to the title screen.
+                g.deathTimer = (g.deathTimer < 0.0f) ? 0.0f : g.deathTimer + dt;
+                if (g.deathTimer >= 1.0f) {
+                    gameplay.reset();
+                    titleScreen.emplace();
+                    state = AppState::TitleScreen;
+                    break;
+                }
+            } else {
+                dethnor::UpdatePlayerControl(g.level.player, app);
+                if (const std::optional<dethnor::Destination> exit =
+                        dethnor::UpdateLevelRuntime(g.level, skeletonAiDefinition, skeletonDefinition, dt)) {
+                    dethnor::CachePlayerStats(session, g.level.player);
+                    session.hasDestination = true;
+                    session.destination = *exit;
+                    g.level = dethnor::BuildLevelRuntime(*exit, session, knightDefinition, app);
+                    g.camera = MakeCameraForLevel(g.level);
+                }
+            }
 
-        dethnor::ResolveAttack(knight, skeleton, combatWorld);
-        dethnor::ResolveAttack(skeleton, knight, combatWorld);
-        dethnor::UpdateCombatWorld(combatWorld, dt);
-
-        dethnor::UpdateRoomCamera(roomCamera, knight.position.x, dt);
+            float minX = 0.0f;
+            float maxX = 0.0f;
+            dethnor::GetCameraBounds(g.level, minX, maxX);
+            dethnor::UpdateLevelCamera(g.camera, g.level.player.position.x, minX, maxX, dt);
+            break;
+        }
+        }
 
         app.BeginFrame();
         app.Clear(engine::colors::White);
-
-        app.BeginCameraMode(roomCamera.camera);
-        dethnor::DrawRoom(app, roomAssets);
-        // Simple Y-sort for two combatants: draw whichever is further "back"
-        // (smaller Y) first, matching CharacterManager's y_sort_enabled.
-        if (knight.position.y <= skeleton.position.y) {
-            dethnor::DrawCharacter(app, knight, knightAssets, dethnor::kDebugDrawHitboxes);
-            dethnor::DrawCharacter(app, skeleton, skeletonAssets, dethnor::kDebugDrawHitboxes);
-        } else {
-            dethnor::DrawCharacter(app, skeleton, skeletonAssets, dethnor::kDebugDrawHitboxes);
-            dethnor::DrawCharacter(app, knight, knightAssets, dethnor::kDebugDrawHitboxes);
+        switch (state) {
+        case AppState::TitleScreen:
+            dethnor::DrawTitleScreen(app, *titleScreen, titleAssets);
+            break;
+        case AppState::Gameplay: {
+            const GameplaySession& g = *gameplay;
+            app.BeginCameraMode(g.camera.camera);
+            dethnor::DrawLevelRuntime(app, g.level, knightAssets, skeletonAssets);
+            app.EndCameraMode();
+            dethnor::DrawHud(app, g.level.player, hudAssets);
+            break;
         }
-        dethnor::DrawCombatWorld(app, combatWorld);
-        app.EndCameraMode();
-
-        // Temporary debug text (M3 owns the real HUD -- see the M2 report).
-        app.DrawText("Knight HP " + std::to_string(static_cast<int>(knight.hitPoints)) + "/" +
-                         std::to_string(static_cast<int>(knightDefinition.maxHitPoints)) + "  Stamina " +
-                         std::to_string(static_cast<int>(knight.stamina)) + "/" +
-                         std::to_string(static_cast<int>(knightDefinition.maxStamina)),
-                     10, 10, 16, engine::colors::DarkGray);
-        app.DrawText("Skeleton HP " + std::to_string(static_cast<int>(skeleton.hitPoints)) + "/" +
-                         std::to_string(static_cast<int>(skeletonDefinition.maxHitPoints)),
-                     10, 30, 16, engine::colors::DarkGray);
-
-        const dethnor::DecisionTrace& trace = skeletonAi.lastDecision;
-        const char* intentName = trace.chosenIntent == dethnor::SkeletonIntent::Attack     ? "Attack"
-                                  : trace.chosenIntent == dethnor::SkeletonIntent::Approach ? "Approach"
-                                                                                            : "None";
-        app.DrawText(std::string("Skeleton AI: ") + intentName + "  dist=" + engine::ToString(trace.distance, 1) +
-                         "  ready=" + (trace.cooldownReady ? "yes" : "no") +
-                         "  approach=" + engine::ToString(trace.approachScore, 2) +
-                         " attack=" + engine::ToString(trace.attackScore, 2),
-                     10, 50, 16, engine::colors::DarkGray);
-
+        }
         app.EndFrame();
     }
 

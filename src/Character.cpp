@@ -1,7 +1,5 @@
 #include "Character.hpp"
 
-#include "Room.hpp"
-
 #include <algorithm>
 #include <cmath>
 
@@ -26,10 +24,23 @@ int ActionTextureIndex(const CharacterDefinition& def, const ActionDefinition* a
     return -1;
 }
 
+// A plain min/max clamp against bounds -- the always-on part (top wall,
+// floor, gates/outer zone edge). Diagonal walls need the sliding treatment
+// in UpdateMovement instead (a plain post-hoc clamp there would let the
+// player "stick" against an angled wall instead of sliding along it -- see
+// the M1 follow-up fix report); UpdateKnockback uses this plain clamp only,
+// matching its pre-M3 behavior (knockback was never given the sliding
+// treatment, since nothing in the migrated content knocks a character hard
+// enough into a diagonal wall for the difference to matter).
+void ClampToBounds(engine::Vec2& position, const MovementBounds& bounds) {
+    position.y = std::clamp(position.y, bounds.minY, bounds.maxY);
+    position.x = std::clamp(position.x, bounds.minX, bounds.maxX);
+}
+
 // Idle.gd / Walk.gd, generalized to any Character (player or Skeleton) --
 // both read the same pendingMovement + turnTimer fields, matching how
 // AIController feeds the identical Walk/Idle states the player uses.
-void UpdateMovement(Character& character, float dt) {
+void UpdateMovement(Character& character, const MovementBounds& bounds, float dt) {
     const engine::Vec2 dir = character.pendingMovement;
     const bool wasMoving = character.isMoving;
     character.isMoving = (dir.x != 0.0f) || (dir.y != 0.0f);
@@ -56,25 +67,31 @@ void UpdateMovement(Character& character, float dt) {
         }
     }
 
-    // Left-wall sliding (see M1's Player.cpp / the follow-up fix report):
-    // project out only the velocity component driving into the diagonal
-    // wall, keeping whatever runs along its surface.
-    const float collisionHalfWidth = character.definition->collisionHalfWidth;
-    const float collisionTopOffset = character.definition->collisionTopOffset;
-    const float attemptedD = (character.position.x + velocity.x * dt) + (character.position.y + velocity.y * dt) -
-                              (collisionHalfWidth + collisionTopOffset);
-    if (attemptedD < RoomConfig::leftWallLineConstant) {
-        constexpr engine::Vec2 wallNormal{0.70710678f, 0.70710678f};
-        const float inward = velocity.x * wallNormal.x + velocity.y * wallNormal.y;
-        if (inward < 0.0f) {
-            velocity.x -= inward * wallNormal.x;
-            velocity.y -= inward * wallNormal.y;
+    // Diagonal-wall sliding (see M1's follow-up fix report): project out
+    // only the velocity component driving into the wall, keeping whatever
+    // runs along its surface. Generalized here to either side of a zone --
+    // world1_level1's zone 0 has a left-side wall, zone 1 a right-side one
+    // (mirrored geometry, same underlying constant; see LevelRuntime.cpp).
+    if (bounds.hasDiagonalWall) {
+        const float margin = character.definition->collisionHalfWidth + character.definition->collisionTopOffset;
+        const float nextX = character.position.x + velocity.x * dt;
+        const float nextY = character.position.y + velocity.y * dt;
+        const engine::Vec2 wallNormal = bounds.diagonalIsLeftWall ? engine::Vec2{0.70710678f, 0.70710678f}
+                                                                   : engine::Vec2{-0.70710678f, 0.70710678f};
+        const float attemptedD =
+            bounds.diagonalIsLeftWall ? (nextX + nextY - margin) : (-nextX + nextY - margin);
+        if (attemptedD < bounds.diagonalConstant) {
+            const float inward = velocity.x * wallNormal.x + velocity.y * wallNormal.y;
+            if (inward < 0.0f) {
+                velocity.x -= inward * wallNormal.x;
+                velocity.y -= inward * wallNormal.y;
+            }
         }
     }
 
     character.position.x += velocity.x * dt;
     character.position.y += velocity.y * dt;
-    ClampToRoom(character.position, collisionHalfWidth, collisionTopOffset);
+    ClampToBounds(character.position, bounds);
 
     character.walkAnimation.Update(dt);
 }
@@ -98,7 +115,7 @@ void EnterAction(Character& character, const ActionDefinition& action) {
     character.actionFrameIndex = 0;
     character.actionFrameTime = 0.0f;
     character.actionHitboxWasActive = false;
-    character.actionHasHitTarget = false;
+    character.actionHitTargets.clear();
     character.isMoving = false;
     character.stamina = std::max(0.0f, character.stamina - action.initialStaminaCost);
 }
@@ -136,7 +153,7 @@ void UpdateAction(Character& character, float dt) {
     }
 }
 
-void UpdateKnockback(Character& character, float dt) {
+void UpdateKnockback(Character& character, const MovementBounds& bounds, float dt) {
     const float decayStep = character.definition->knockbackDecay * dt;
     const float magnitude =
         std::sqrt(character.knockbackVelocity.x * character.knockbackVelocity.x +
@@ -151,8 +168,7 @@ void UpdateKnockback(Character& character, float dt) {
 
     character.position.x += character.knockbackVelocity.x * dt;
     character.position.y += character.knockbackVelocity.y * dt;
-    ClampToRoom(character.position, character.definition->collisionHalfWidth,
-                character.definition->collisionTopOffset);
+    ClampToBounds(character.position, bounds);
 
     if (character.knockbackVelocity.x == 0.0f && character.knockbackVelocity.y == 0.0f) {
         character.state = (character.stunTimeRemaining <= 0.0f) ? CombatState::Idle : CombatState::Stunned;
@@ -210,7 +226,7 @@ Character SpawnCharacter(const CharacterDefinition& def, engine::Vec2 position, 
     return character;
 }
 
-void UpdateCharacter(Character& character, float dt) {
+void UpdateCharacter(Character& character, const MovementBounds& bounds, float dt) {
     if (character.state == CombatState::Dead) {
         // dead.gd has no update() override, but its "fall" clip still needs
         // to actually play -- without this it freezes on whatever frame
@@ -239,7 +255,7 @@ void UpdateCharacter(Character& character, float dt) {
         if (const ActionBinding* binding = TryResolveAction(character)) {
             EnterAction(character, *binding->action);
         } else {
-            UpdateMovement(character, dt);
+            UpdateMovement(character, bounds, dt);
         }
         break;
     case CombatState::Attack:
@@ -247,7 +263,7 @@ void UpdateCharacter(Character& character, float dt) {
         UpdateAction(character, dt);
         break;
     case CombatState::Knockback:
-        UpdateKnockback(character, dt);
+        UpdateKnockback(character, bounds, dt);
         break;
     case CombatState::Stunned:
         UpdateStunned(character, dt);

@@ -1,14 +1,13 @@
-#include "RoomCamera.hpp"
-
-#include "Room.hpp"
+#include "LevelCamera.hpp"
 
 #include <algorithm>
 
 namespace dethnor {
 namespace {
 
-constexpr float pixelScale = 4.0f;   // project.godot: window/stretch/scale
-constexpr float smoothTime = 1.0f;   // LevelCamera.gd: smooth_damp(..., 1.0, delta)
+constexpr float pixelScale = 4.0f; // project.godot: window/stretch/scale
+constexpr float smoothTime = 1.0f; // LevelCamera.gd: smooth_damp(..., 1.0, delta)
+constexpr float halfViewportWidth = 199.0f; // LevelCamera.gd's own hardcoded half_screen_x
 
 // LevelCamera.gd's smooth_damp is a transcription of Unity's
 // Mathf.SmoothDamp, called as:
@@ -51,22 +50,22 @@ float SmoothDampVelocityNudge(float current, float target, float dt) {
 
 } // namespace
 
-RoomCamera MakeRoomCamera() {
-    RoomCamera roomCamera;
-    roomCamera.camera.position = engine::Vec2{RoomConfig::screenWidth * 0.5f, RoomConfig::screenHeight * 0.5f};
-    roomCamera.camera.zoom = pixelScale;
-    return roomCamera;
+LevelCamera MakeLevelCamera(engine::Vec2 initialPosition) {
+    LevelCamera levelCamera;
+    levelCamera.camera.position = initialPosition;
+    levelCamera.camera.zoom = pixelScale;
+    return levelCamera;
 }
 
-void UpdateRoomCamera(RoomCamera& roomCamera, float targetPlayerX, float dt) {
-    // half_screen_x = 199.0 in LevelCamera.gd -- hardcoded there rather than
-    // derived, but numerically identical to screenWidth / 2.
-    const float halfViewportWidth = RoomConfig::screenWidth * 0.5f;
-    const float clampedTarget =
-        std::clamp(targetPlayerX, halfViewportWidth, RoomConfig::width - halfViewportWidth);
+float ClampCameraTargetX(float targetX, float minBoundX, float maxBoundX) {
+    return std::clamp(targetX, minBoundX + halfViewportWidth, maxBoundX - halfViewportWidth);
+}
 
-    const float velocityNudge = SmoothDampVelocityNudge(roomCamera.camera.position.x, clampedTarget, dt);
-    roomCamera.camera.position.x += velocityNudge;
+void UpdateLevelCamera(LevelCamera& levelCamera, float targetPlayerX, float minBoundX, float maxBoundX, float dt) {
+    const float clampedTarget = ClampCameraTargetX(targetPlayerX, minBoundX, maxBoundX);
+
+    const float velocityNudge = SmoothDampVelocityNudge(levelCamera.camera.position.x, clampedTarget, dt);
+    levelCamera.camera.position.x += velocityNudge;
 }
 
 } // namespace dethnor

@@ -46,6 +46,13 @@ struct CharacterDefinition {
     float staminaRegenPerSecond;
     float staminaRegenDelay;
 
+    // CharacterConfig.max_magic_points: 0 for both Knight and Skeleton
+    // (neither overrides the default). Not used for any MP-costing action
+    // in this milestone -- kept only because the HUD's own real behavior
+    // (level_ui.gd hides the MP meter entirely when this is 0, rather than
+    // showing it empty) depends on knowing it; see Hud.cpp.
+    float maxMagicPoints;
+
     // 0.0 disables iframes entirely on hit (the Skeleton's case).
     float iframesOnHitSec;
     float iframeBlinkPeriod;
@@ -98,6 +105,7 @@ inline CharacterDefinition MakeKnightDefinition() {
     def.maxStamina = 100.0f;
     def.staminaRegenPerSecond = 25.0f;
     def.staminaRegenDelay = 1.0f;
+    def.maxMagicPoints = 0.0f;
     def.iframesOnHitSec = 0.6f;
     def.iframeBlinkPeriod = 0.08f;
     def.knockbackDecay = 300.0f;
@@ -145,6 +153,7 @@ inline CharacterDefinition MakeSkeletonDefinition() {
     def.maxStamina = 100.0f;            // default; inert for this encounter (no cost reads it)
     def.staminaRegenPerSecond = 25.0f;
     def.staminaRegenDelay = 1.0f;
+    def.maxMagicPoints = 0.0f;
     def.iframesOnHitSec = 0.0f; // enemy_skeleton.tres override -- no post-hit invulnerability at all
     def.iframeBlinkPeriod = 0.08f;
     def.knockbackDecay = 300.0f; // not overridden

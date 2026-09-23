@@ -47,8 +47,16 @@ struct Character {
     int actionFrameIndex = 0;
     float actionFrameTime = 0.0f;
     bool actionHitboxWasActive = false; // edge-detects hitbox activation
-    bool actionHasHitTarget = false;    // one hit per activation, like Godot's Area2D edge trigger
-    bool sustainInputHeld = false;      // Block only: is the held key still down this frame
+    // One hit per TARGET per activation, like Godot's Area2D edge trigger --
+    // tracked per defender (not a single flag) since M3 added multi-enemy
+    // fights: a swing that overlaps two enemies at once should land on
+    // both, exactly once each, not silently skip the second one because the
+    // first already "used up" a single shared flag (an M2-era assumption
+    // that broke the moment more than one enemy existed -- see the M3
+    // report). Small vector, not a set: at most a couple of simultaneous
+    // targets ever realistically overlap one hitbox.
+    std::vector<const Character*> actionHitTargets;
+    bool sustainInputHeld = false; // Block only: is the held key still down this frame
 
     float stunTimeRemaining = 0.0f; // set on hit; Knockback consumes it before falling to Stunned
     engine::Vec2 knockbackVelocity{};
@@ -78,12 +86,36 @@ struct Character {
 
 Character SpawnCharacter(const CharacterDefinition& def, engine::Vec2 position, int facing);
 
+// The navigable-area boundary for whichever zone the character is currently
+// in -- computed fresh each frame by LevelRuntime (which knows about zones,
+// gates, and walls) and handed down here, so Character.cpp itself stays
+// level-agnostic. minX/maxX are always-on clamps (used for gates and the
+// zone's own outer edge); the diagonal wall (at most one applies at a time
+// in the migrated content) additionally constrains movement via sliding
+// (see UpdateCharacter's left/right-wall projection), matching the M1/M2
+// diagonal-corner behavior generalized to any zone that has one.
+struct MovementBounds {
+    float minX = 0.0f;
+    float maxX = 0.0f;
+    float minY = 0.0f;
+    float maxY = 0.0f;
+
+    bool hasDiagonalWall = false;
+    // Which side the wall is on -- left (zone 0's corner) or right (zone
+    // 1's), mirrored versions of the same geometry. diagonalConstant is the
+    // zone-offset-adjusted line constant for that side; see
+    // Character.cpp's UpdateMovement for the exact (margin-inclusive)
+    // formula and LevelRuntime.cpp for how each zone's constant is derived.
+    bool diagonalIsLeftWall = true;
+    float diagonalConstant = 0.0f;
+};
+
 // Advances one character by one frame: input buffer, i-frame/blink timers,
 // stamina regen, then the combat state machine itself (action resolution,
 // movement, action-frame timing, knockback/stun). Does NOT resolve
 // hitbox-vs-hurtbox damage between characters -- see CombatSystem.hpp for
 // that (it needs both characters at once, after each has been advanced).
-void UpdateCharacter(Character& character, float dt);
+void UpdateCharacter(Character& character, const MovementBounds& bounds, float dt);
 
 engine::Rect CollisionBox(const Character& character);
 engine::Rect HurtboxWorldRect(const Character& character);

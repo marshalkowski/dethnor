@@ -104,11 +104,19 @@ void ResolveAttack(Character& attacker, Character& defender, CombatWorld& world)
         // Rising edge of the hitbox window -- Godot's Area2D only fires
         // area_entered on this same transition, which is what naturally
         // prevents one swing from registering multiple hits; reproduced
-        // explicitly here since Bengine has no enter-event primitive.
+        // explicitly here since Bengine has no enter-event primitive. This
+        // function is called once per potential defender every frame (see
+        // LevelRuntime.cpp), so this reset must only happen on the true
+        // rising edge, not on every call -- actionHitboxWasActive already
+        // only flips false->true once per activation regardless of how many
+        // defenders are checked, so this is safe to run from any call site.
         attacker.actionHitboxWasActive = true;
-        attacker.actionHasHitTarget = false;
+        attacker.actionHitTargets.clear();
     }
-    if (attacker.actionHasHitTarget) {
+    const bool alreadyHitThisDefender =
+        std::find(attacker.actionHitTargets.begin(), attacker.actionHitTargets.end(), &defender) !=
+        attacker.actionHitTargets.end();
+    if (alreadyHitThisDefender) {
         return;
     }
     if (defender.state == CombatState::Dead || defender.isInvulnerable) {
@@ -118,7 +126,7 @@ void ResolveAttack(Character& attacker, Character& defender, CombatWorld& world)
     const engine::Rect hitbox = HitboxWorldRect(attacker);
     const engine::Rect hurtbox = HurtboxWorldRect(defender);
     if (engine::Intersects(hitbox, hurtbox)) {
-        attacker.actionHasHitTarget = true;
+        attacker.actionHitTargets.push_back(&defender);
         ApplyDamage(attacker, defender, *attacker.currentAction, world);
     }
 }

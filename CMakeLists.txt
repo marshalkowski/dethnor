@@ -13,12 +13,15 @@ add_subdirectory(vendor/Bengine)
 
 add_executable(dungeons-of-dethnor
     src/main.cpp
-    src/Room.cpp
-    src/RoomCamera.cpp
     src/Character.cpp
     src/CombatSystem.cpp
     src/SkeletonAI.cpp
     src/PlayerControl.cpp
+    src/LevelDefinition.cpp
+    src/LevelRuntime.cpp
+    src/LevelCamera.cpp
+    src/Hud.cpp
+    src/TitleScreen.cpp
 )
 
 target_link_libraries(dungeons-of-dethnor
