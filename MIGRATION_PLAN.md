@@ -5,7 +5,7 @@ Audit date: 2026-09-19
 Source Godot project (read-only reference): `C:/Users/marsh/OneDrive/Documents/dungeons-of-dethnor`
 Target C++ project (this repo): `C:/Users/marsh/game_projects/dethnor`, engine vendored at `vendor/Bengine`
 
-No migration work has been implemented yet. This document is the audit + proposed plan only.
+**Status (2026-09-24): M0–M3 are done; M4 and M5 remain.** §1–§4 are the original audit (2026-09-19) and are kept as written; §5 tracks milestone status.
 
 ## 1. Architectural overview — the Godot game
 
@@ -76,14 +76,34 @@ Everything else absent (tweening, particles, gamepad, fonts, fixed timestep, log
 
 ## 5. Proposed migration plan
 
-Six milestones, each a vertical slice that builds and runs, increasing in scope:
+Six milestones, each a vertical slice that builds and runs, increasing in scope. M0–M3 are done; M4 and M5 remain.
 
-- **M0 — Engine bring-up**: Bengine window/loop wired into Dethnor's `main.cpp`, a scene-state skeleton (`enum AppState` + `std::optional`, matching Bengine's own idiom) with one placeholder scene, one real sprite asset copied over and drawn. *Run test*: window opens showing a static character sprite, closes cleanly.
-- **M1 — Movement + camera + one static room**: `Character` struct, 8-direction movement with idle/walk animation switching, a hand-rolled camera (X-follow, clamped, smooth-damped — ported directly from `LevelCamera`'s math), one hardcoded test room (background tiling + wall `Rect`s, values pulled from a real `ZoneData`). *Run test*: walk the player around a bounded room, camera follows correctly.
-- **M2 — Combat core** *(needs the `Key` enum approval)*: input buffering, directional light/heavy/block attacks (Knight moveset, hardcoded from real frame data), hitbox/hurtbox, damage/knockback/hit-stop/i-frames, one enemy (Skeleton) with hardcoded chase/engage AI, floating damage text. *Run test*: fight and kill one skeleton in the test room.
-- **M3 — UI + zone flow + title screen**: segmented HP/Stamina/MP meters, title screen with class select, wave/gate zone flow (trigger → close gates → spawn wave → clear → open gates) reusing M2's enemy. *Run test*: title screen → pick a class → fight through 1–2 waves with live UI.
-- **M4 — Data-driven content pipeline**: vendor a JSON library at the Dethnor level, write loaders mirroring each Resource schema, re-author existing `.tres` content by hand, generalize AI into the composable state/condition model, chain multiple real zones/levels with doors carrying player state. *Run test*: play all three `world1` levels end-to-end with real content and multiple enemy types.
-- **M5 — Parity polish**: remaining classes' full movesets (Rogue, Wizard/spells), FX/projectile system, remaining bosses (Mimic/Executioner), resolve the audio-bug decision, resolve any pixel-scaling decision. *Run test*: full playthrough compared side-by-side with the Godot build.
+- **M0 — Engine bring-up** — ✅ DONE (`2c27bc4`, "Initialize engine"): Bengine window/loop wired into Dethnor's `main.cpp`, a scene-state skeleton (`enum AppState` + `std::optional`, matching Bengine's own idiom) with one placeholder scene, one real sprite asset drawn. *Run test*: window opens showing a static character sprite, closes cleanly.
+- **M1 — Movement + camera + one static room** — ✅ DONE (`0804a7b`): `Character` struct, 8-direction movement with idle/walk animation switching, a hand-rolled camera (X-follow, clamped, smooth-damped — ported directly from `LevelCamera`'s math), one hardcoded test room (zone 0 of `world1_level1`, real geometry). Also moved asset loading onto Bengine E1's asset-root workflow. *Run test*: walk the player around a bounded room, camera follows correctly.
+- **M2 — Combat core** — ✅ DONE (`6d2da6d`): input buffering, directional light/heavy/block attacks (Knight moveset, real frame data), hitbox/hurtbox, damage/knockback/hit-stop/i-frames, one enemy (Skeleton), floating damage text. The Skeleton uses the utility-scoring AI from `AI_ARCHITECTURE_PROPOSAL.md` (Approach/Attack intents, inspectable decision trace) rather than a hardcoded chase FSM, issuing commands through the same `InputBuffer` the player uses. *Run test*: fight and kill one skeleton in the test room.
+- **M3 — UI + zone flow + title screen** — ✅ DONE (`838b7b3`, plus `91863e1` for a Bengine submodule bump): segmented HP/Stamina/MP meters, title screen with class select, wave/gate zone flow (trigger → close gates → spawn wave → clear → open gates) with multiple simultaneous enemies, doors and cross-level transitions carrying `SessionState`, death → title flow. *Run test*: title screen → pick a class → fight through 1–2 waves with live UI.
+
+**M3 caveats (what "done" does not cover):**
+- **Skeleton stands in for Zombie.** `world1_level1`'s waves really spawn Zombies, which aren't migrated; they are substituted 1-for-1 with Skeletons (same counts).
+- **`world1_level2` is a minimal destination.** It keeps the real zone geometry, spawn points, and the real left-destination back into level 1, but omits the real wave (4 Skeletons + 1 Mimic) and the zone's door to `world1_level3`. It exists to prove cross-level transition, not to be a playable encounter. `world1_level3` is not ported.
+- **Only Knight is fully playable.** Rogue and Wizard appear on the class-select screen (idle icons only); selecting either shows "Not yet available" and does not start the game. No Rogue/Wizard movesets, spells, or MP use exist yet.
+
+- **M4 — Data-driven content pipeline** *(in progress)*: goal is to move hardcoded content into data files and finish the real `world1` content. Steps:
+  1. Vendor nlohmann/json as a single header under `vendor/`, exposed to the game via an INTERFACE include path in `CMakeLists.txt`; verify the build. *(Bengine itself is not modified.)*
+  2. Loaders for the action/character schemas (`ActionData`/`AttackData`/`BlockData`, `CharacterConfig`): define the JSON shape, write game-side loaders into the existing `ActionDefinition`/`CharacterDefinition` structs, and switch Knight and Skeleton from hardcoded C++ to loaded data.
+  3. Data-driven enemy AI, following `AI_ARCHITECTURE_PROPOSAL.md` (hybrid: a small mode FSM for one-way states such as dormant/awake/stunned/dead, plus utility scoring for moment-to-moment intent choice — **not** the Godot composable `AIStateResource`/condition graph). Load the intent × consideration table (curve type + weight per cell) from data using the fixed input-signal and curve vocabulary the proposal calls for; add intents (Defend/Retreat, per-attack scoring) only as the ported enemies need them.
+  4. Loaders for `LevelData`/`ZoneData`/`WaveData` replacing the hardcoded `LevelDefinition.cpp`, including spawn points, doors, and destinations.
+  5. Port the enemy types that `world1` actually spawns (Zombie to replace the Skeleton stand-in; Mimic for `world1_level2`'s wave — confirm the exact roster against the Godot `LevelData` when reached), re-authored by hand in the new format.
+  6. Fill in the real `world1_level2` zone (wave + door) and port `world1_level3`, with doors carrying `SessionState` (HP/stamina/MP, spawn point) across all three levels.
+  7. *Run test*: play all three `world1` levels end-to-end with real content and multiple enemy types.
+- **M5 — Parity polish**: remaining classes, effects, bosses, and the open decisions. Steps:
+  1. Rogue: full moveset and animations; make it selectable on the title screen.
+  2. Wizard: full moveset plus spells and MP consumption; make it selectable on the title screen.
+  3. FX/projectile system (pooled, per §3), needed by spells and ranged attacks.
+  4. Remaining bosses (Executioner, and Mimic if a boss variant is required beyond its M4 regular-enemy port), including the boss-title banner; add any AI intents/phase modes they need.
+  5. Resolve the hit-sound decision from §1 (port "SFX on every hit" as the intended design, or reproduce the current silence).
+  6. Resolve the pixel-upscaling question from §3 (draw at scaled sizes vs. size the window to match).
+  7. *Run test*: full playthrough compared side-by-side with the Godot build.
 
 ## 6. Recommended first milestone (M0 only)
 
@@ -112,4 +132,4 @@ Beyond the two gaps in §4 (which are near-term blockers), a few other things st
 
 If forced to prioritize one as an actual future proposal, it's the **camera** — the single biggest "every game needs this" gap with zero current support.
 
-Nothing has been implemented yet — this document is the audit/plan deliverable only.
+§1–§4, §6, and §7 are the original audit-era text and describe the state of things as of 2026-09-19; see §5 for current milestone status.
