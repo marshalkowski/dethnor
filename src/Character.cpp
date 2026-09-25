@@ -322,6 +322,14 @@ CharacterAssets LoadCharacterAssets(engine::Engine& app, const CharacterDefiniti
     };
 }
 
+CharacterAssetMap LoadCharacterAssets(engine::Engine& app, const std::map<std::string, CharacterDefinition>& characters) {
+    CharacterAssetMap assets;
+    for (const auto& [id, definition] : characters) {
+        assets.emplace(&definition, LoadCharacterAssets(app, definition));
+    }
+    return assets;
+}
+
 void DrawCharacter(engine::Engine& app, const Character& character, const CharacterAssets& assets,
                     bool debugDrawHitboxes) {
     if (character.isInvulnerable && !character.iframeBlinkVisible) {

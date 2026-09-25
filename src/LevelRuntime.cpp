@@ -81,30 +81,34 @@ MovementBounds ComputeMovementBounds(const LevelRuntime& level, engine::Vec2 pos
 // reproducible during development, in the same spirit as the AI redesign's
 // preference for understandable over arbitrary-random behavior (spawn
 // placement isn't an AI decision, but the same reasoning applies).
-void SpawnWave(ZoneRuntime& zone, const CharacterDefinition& skeletonDefinition, engine::Vec2 playerPosition) {
+void SpawnWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     const WaveDefinition& wave = zone.definition->waves[static_cast<std::size_t>(zone.currentWaveIndex)];
     const engine::Rect& spawnRect = zone.definition->spawnRect;
     const int totalCount = wave.TotalEnemyCount();
     zone.enemies.clear();
     zone.enemies.reserve(static_cast<std::size_t>(totalCount));
-    for (int i = 0; i < totalCount; ++i) {
-        const float t = (totalCount > 1) ? static_cast<float>(i) / static_cast<float>(totalCount - 1) : 0.5f;
-        const engine::Vec2 worldPosition{zone.worldOffsetX + spawnRect.x + t * spawnRect.width,
-                                          spawnRect.y + spawnRect.height * 0.5f};
-        zone.enemies.emplace_back(skeletonDefinition, worldPosition, 1);
-        // base_character.gd's _ready(): an AI-controlled character turns to
-        // face the player at spawn if the player is to its left.
-        zone.enemies.back().character.facing = (playerPosition.x < worldPosition.x) ? -1 : 1;
+    int index = 0;
+    for (const WaveSpawnGroup& group : wave.groups) {
+        const CharacterDefinition& enemyDefinition = content.Character(group.enemyId);
+        for (int i = 0; i < group.count; ++i, ++index) {
+            const float t = (totalCount > 1) ? static_cast<float>(index) / static_cast<float>(totalCount - 1) : 0.5f;
+            const engine::Vec2 worldPosition{zone.worldOffsetX + spawnRect.x + t * spawnRect.width,
+                                              spawnRect.y + spawnRect.height * 0.5f};
+            zone.enemies.emplace_back(enemyDefinition, worldPosition, 1);
+            // base_character.gd's _ready(): an AI-controlled character turns to
+            // face the player at spawn if the player is to its left.
+            zone.enemies.back().character.facing = (playerPosition.x < worldPosition.x) ? -1 : 1;
+        }
     }
 }
 
-void ActivateZone(ZoneRuntime& zone, const CharacterDefinition& skeletonDefinition, engine::Vec2 playerPosition) {
+void ActivateZone(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     if (zone.active || zone.cleared || zone.definition->waves.empty()) {
         return;
     }
     zone.active = true;
     zone.currentWaveIndex = 0;
-    SpawnWave(zone, skeletonDefinition, playerPosition);
+    SpawnWave(zone, content, playerPosition);
 }
 
 bool AllEnemiesDefeated(const ZoneRuntime& zone) {
@@ -124,7 +128,7 @@ engine::AnimationClip DoorOpenClip() {
         .loop = false};
 }
 
-void AdvanceWave(ZoneRuntime& zone, const CharacterDefinition& skeletonDefinition, engine::Vec2 playerPosition) {
+void AdvanceWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     ++zone.currentWaveIndex;
     if (zone.currentWaveIndex >= static_cast<int>(zone.definition->waves.size())) {
         zone.active = false;
@@ -133,7 +137,7 @@ void AdvanceWave(ZoneRuntime& zone, const CharacterDefinition& skeletonDefinitio
             zone.doorOpenAnimation.emplace(DoorOpenClip());
         }
     } else {
-        SpawnWave(zone, skeletonDefinition, playerPosition);
+        SpawnWave(zone, content, playerPosition);
     }
 }
 
@@ -191,8 +195,9 @@ std::optional<Destination> CheckLevelExit(const LevelRuntime& level) {
 } // namespace
 
 LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionState& session,
-                                const CharacterDefinition& knightDefinition, engine::Engine& app) {
-    const LevelDefinition& def = GetLevelDefinition(destination.world, destination.level);
+                                const ContentLibrary& content, const CharacterDefinition& playerDefinition,
+                                engine::Engine& app) {
+    const LevelDefinition& def = content.Level(destination.world, destination.level);
 
     const std::string bgDir = std::string("sprites/bg/") + def.bgSet + "/";
     const engine::TextureHandle backgroundTexture = app.LoadTexture((bgDir + def.bgSet + "_bg.png").c_str());
@@ -201,8 +206,9 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
     const engine::TextureHandle doorShutTexture = app.LoadTexture("sprites/bg/MBEU_door-Shut.png");
     const engine::TextureHandle doorOpenTexture = app.LoadTexture("sprites/bg/MBEU_door-Open.png");
 
-    LevelRuntime level(knightDefinition, backgroundTexture, sideWallTexture, doorShutTexture, doorOpenTexture);
+    LevelRuntime level(playerDefinition, backgroundTexture, sideWallTexture, doorShutTexture, doorOpenTexture);
     level.currentDestination = destination;
+    level.content = &content;
     level.definition = &def;
 
     float offsetX = 0.0f;
@@ -243,20 +249,22 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
     return level;
 }
 
-std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const AIDefinition& skeletonAiDefinition,
-                                               const CharacterDefinition& skeletonDefinition, float dt) {
-    const CharacterDefinition& knightDefinition = *level.player.definition;
+std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
+    const CharacterDefinition& playerDefinition = *level.player.definition;
     const MovementBounds playerBounds = ComputeMovementBounds(level, level.player.position,
-                                                                knightDefinition.collisionHalfWidth,
-                                                                knightDefinition.collisionTopOffset);
+                                                                playerDefinition.collisionHalfWidth,
+                                                                playerDefinition.collisionTopOffset);
     UpdateCharacter(level.player, playerBounds, dt);
 
     for (ZoneRuntime& zone : level.zones) {
         for (EnemyInstance& enemy : zone.enemies) {
-            UpdateSkeletonAI(enemy.character, level.player, enemy.aiRuntime, skeletonAiDefinition, dt);
+            const CharacterDefinition& enemyDefinition = *enemy.character.definition;
+            if (enemyDefinition.ai != nullptr) {
+                UpdateSkeletonAI(enemy.character, level.player, enemy.aiRuntime, *enemyDefinition.ai, dt);
+            }
             const MovementBounds enemyBounds = ComputeMovementBounds(
-                level, enemy.character.position, skeletonDefinition.collisionHalfWidth,
-                skeletonDefinition.collisionTopOffset);
+                level, enemy.character.position, enemyDefinition.collisionHalfWidth,
+                enemyDefinition.collisionTopOffset);
             UpdateCharacter(enemy.character, enemyBounds, dt);
         }
     }
@@ -275,7 +283,7 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const AIDefin
                 const engine::Rect worldTrigger{localTrigger.x + zone.worldOffsetX, localTrigger.y,
                                                  localTrigger.width, localTrigger.height};
                 if (engine::Intersects(CollisionBox(level.player), worldTrigger)) {
-                    ActivateZone(zone, skeletonDefinition, level.player.position);
+                    ActivateZone(zone, *level.content, level.player.position);
                     break;
                 }
             }
@@ -284,7 +292,7 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const AIDefin
 
     for (ZoneRuntime& zone : level.zones) {
         if (zone.active && AllEnemiesDefeated(zone)) {
-            AdvanceWave(zone, skeletonDefinition, level.player.position);
+            AdvanceWave(zone, *level.content, level.player.position);
         }
         if (zone.doorOpenAnimation.has_value()) {
             zone.doorOpenAnimation->Update(dt);
@@ -309,8 +317,7 @@ void GetCameraBounds(const LevelRuntime& level, float& outMinX, float& outMaxX) 
     outMaxX = maxX;
 }
 
-void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssets& knightAssets,
-                      const CharacterAssets& skeletonAssets) {
+void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets) {
     const float bgWidth = static_cast<float>(app.TextureWidth(level.backgroundTexture));
     for (const ZoneRuntime& zone : level.zones) {
         for (int i = 0; i < zone.definition->sizeInScreens; ++i) {
@@ -368,10 +375,10 @@ void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const Char
         const CharacterAssets* assets;
     };
     std::vector<DrawEntry> drawOrder;
-    drawOrder.push_back({&level.player, &knightAssets});
+    drawOrder.push_back({&level.player, &assets.at(level.player.definition)});
     for (const ZoneRuntime& zone : level.zones) {
         for (const EnemyInstance& enemy : zone.enemies) {
-            drawOrder.push_back({&enemy.character, &skeletonAssets});
+            drawOrder.push_back({&enemy.character, &assets.at(enemy.character.definition)});
         }
     }
     std::sort(drawOrder.begin(), drawOrder.end(), [](const DrawEntry& a, const DrawEntry& b) {

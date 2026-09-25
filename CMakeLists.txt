@@ -25,7 +25,6 @@ add_executable(dungeons-of-dethnor
     src/Content.cpp
     src/SkeletonAI.cpp
     src/PlayerControl.cpp
-    src/LevelDefinition.cpp
     src/LevelRuntime.cpp
     src/LevelCamera.cpp
     src/Hud.cpp
@@ -61,10 +60,9 @@ enable_testing()
 add_executable(dethnor-content-check
     tests/content_check.cpp
     src/Content.cpp
-    src/LevelDefinition.cpp
 )
 target_link_libraries(dethnor-content-check PRIVATE bengine nlohmann_json)
-target_include_directories(dethnor-content-check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+target_include_directories(dethnor-content-check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_definitions(dethnor-content-check PRIVATE
     DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )

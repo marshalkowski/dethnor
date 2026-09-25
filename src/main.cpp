@@ -2,6 +2,7 @@
 
 #include "CharacterDefinition.hpp"
 #include "CombatSystem.hpp"
+#include "Content.hpp"
 #include "Hud.hpp"
 #include "LevelCamera.hpp"
 #include "LevelRuntime.hpp"
@@ -64,13 +65,13 @@ int main() {
 
     // App-lifetime resources: loaded once, shared across every title visit
     // and every level transition for the life of the process.
-    const dethnor::CharacterDefinition knightDefinition = dethnor::MakeKnightDefinition();
-    const dethnor::CharacterDefinition skeletonDefinition = dethnor::MakeSkeletonDefinition();
-    const dethnor::CharacterAssets knightAssets = dethnor::LoadCharacterAssets(app, knightDefinition);
-    const dethnor::CharacterAssets skeletonAssets = dethnor::LoadCharacterAssets(app, skeletonDefinition);
+    // All gameplay content comes from assets/data/**.json (see Content.hpp);
+    // a malformed file throws here, at startup, naming the file and key.
+    const dethnor::ContentLibrary content = dethnor::LoadContent(app.ResolveAssetPath("data"));
+    const dethnor::CharacterDefinition& knightDefinition = content.Character("player_knight");
+    const dethnor::CharacterAssetMap characterAssets = dethnor::LoadCharacterAssets(app, content.characters);
     const dethnor::HudAssets hudAssets = dethnor::LoadHudAssets(app);
     const dethnor::TitleScreenAssets titleAssets = dethnor::LoadTitleScreenAssets(app);
-    const dethnor::AIDefinition skeletonAiDefinition{};
 
     // GameManager's real lifetime: a single instance for the whole process,
     // never reset when returning to the title screen. This is a deliberate,
@@ -98,7 +99,7 @@ int main() {
                 session.playerClass = dethnor::PlayerClass::Knight;
                 const dethnor::Destination start{1, 1, "ps0"};
                 const dethnor::Destination& destination = session.hasDestination ? session.destination : start;
-                dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, knightDefinition, app);
+                dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, content, knightDefinition, app);
                 dethnor::LevelCamera camera = MakeCameraForLevel(level);
                 gameplay.emplace(GameplaySession{std::move(level), std::move(camera), -1.0f});
                 titleScreen.reset();
@@ -121,11 +122,11 @@ int main() {
             } else {
                 dethnor::UpdatePlayerControl(g.level.player, app);
                 if (const std::optional<dethnor::Destination> exit =
-                        dethnor::UpdateLevelRuntime(g.level, skeletonAiDefinition, skeletonDefinition, dt)) {
+                        dethnor::UpdateLevelRuntime(g.level, dt)) {
                     dethnor::CachePlayerStats(session, g.level.player);
                     session.hasDestination = true;
                     session.destination = *exit;
-                    g.level = dethnor::BuildLevelRuntime(*exit, session, knightDefinition, app);
+                    g.level = dethnor::BuildLevelRuntime(*exit, session, content, knightDefinition, app);
                     g.camera = MakeCameraForLevel(g.level);
                 }
             }
@@ -147,7 +148,7 @@ int main() {
         case AppState::Gameplay: {
             const GameplaySession& g = *gameplay;
             app.BeginCameraMode(g.camera.camera);
-            dethnor::DrawLevelRuntime(app, g.level, knightAssets, skeletonAssets);
+            dethnor::DrawLevelRuntime(app, g.level, characterAssets);
             app.EndCameraMode();
             dethnor::DrawHud(app, g.level.player, hudAssets);
             break;

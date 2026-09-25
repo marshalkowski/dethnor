@@ -123,8 +123,6 @@ void CheckLevels(const ContentLibrary& library) {
     }
 }
 
-#include "hardcoded_equivalence.inc"
-
 } // namespace
 
 int main() {
@@ -135,7 +133,6 @@ int main() {
                     library.ai.size(), library.characters.size(), library.levels.size());
         CheckAssets(assetRoot, library);
         CheckLevels(library);
-        CheckAgainstHardcoded(library);
     } catch (const std::exception& error) {
         Fail(std::string("LoadContent threw: ") + error.what());
     }

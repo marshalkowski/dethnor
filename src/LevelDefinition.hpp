@@ -87,7 +87,4 @@ struct LevelDefinition {
     std::optional<Destination> rightDestination;
 };
 
-// Interim (removed in M4 step 4, when levels come from ContentLibrary).
-const LevelDefinition& GetLevelDefinition(int world, int level);
-
 } // namespace dethnor

@@ -4,6 +4,10 @@
 #include "InputBuffer.hpp"
 #include "engine/Engine.hpp"
 
+#include <map>
+#include <string>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace dethnor {
@@ -136,6 +140,12 @@ struct CharacterAssets {
 };
 
 CharacterAssets LoadCharacterAssets(engine::Engine& app, const CharacterDefinition& def);
+
+// Textures for every character in a ContentLibrary, keyed by the (address-
+// stable) definition a Character points at -- so drawing an enemy is a lookup
+// on its own definition rather than a per-enemy-type parameter.
+using CharacterAssetMap = std::map<const CharacterDefinition*, CharacterAssets>;
+CharacterAssetMap LoadCharacterAssets(engine::Engine& app, const std::map<std::string, CharacterDefinition>& characters);
 
 // World-space only -- call between BeginCameraMode/EndCameraMode. Draws the
 // hurtbox (and hitbox, while one is active) as outlined rects when

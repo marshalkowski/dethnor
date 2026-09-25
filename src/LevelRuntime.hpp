@@ -3,6 +3,7 @@
 #include "Character.hpp"
 #include "CharacterDefinition.hpp"
 #include "CombatSystem.hpp"
+#include "Content.hpp"
 #include "LevelDefinition.hpp"
 #include "SessionState.hpp"
 #include "SkeletonAI.hpp"
@@ -68,6 +69,7 @@ struct ZoneRuntime {
 // fresh on every level transition -- see BuildLevel).
 struct LevelRuntime {
     Destination currentDestination;
+    const ContentLibrary* content = nullptr;
     const LevelDefinition* definition = nullptr;
     std::vector<ZoneRuntime> zones;
 
@@ -83,9 +85,9 @@ struct LevelRuntime {
     // texture member must be supplied up front, the same way Character's
     // own constructor requires a real CharacterDefinition for its Animation
     // members.
-    LevelRuntime(const CharacterDefinition& knightDefinition, engine::TextureHandle background,
+    LevelRuntime(const CharacterDefinition& playerDefinition, engine::TextureHandle background,
                  engine::TextureHandle sideWall, engine::TextureHandle doorShut, engine::TextureHandle doorOpen)
-        : player(SpawnCharacter(knightDefinition, {}, 1)), backgroundTexture(background), sideWallTexture(sideWall),
+        : player(SpawnCharacter(playerDefinition, {}, 1)), backgroundTexture(background), sideWallTexture(sideWall),
           doorShutTexture(doorShut), doorOpenTexture(doorOpen) {}
 };
 
@@ -95,7 +97,8 @@ struct LevelRuntime {
 // LevelRuntime._spawn_player()'s fresh-game fallback) and restoring cached
 // HP/stamina from `session` if present (GameManager.load_player()).
 LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionState& session,
-                                const CharacterDefinition& knightDefinition, engine::Engine& app);
+                                const ContentLibrary& content, const CharacterDefinition& playerDefinition,
+                                engine::Engine& app);
 
 // Per-frame update: player/enemy AI+control feed-in is the caller's job
 // (PlayerControl/SkeletonAI, called before this); this advances every
@@ -104,12 +107,10 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
 // exit this frame (a zone's opened door, or an open level-edge boundary) --
 // the caller (the Gameplay app state) owns actually tearing down and
 // rebuilding for it, matching M3's state-ownership requirement.
-std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const AIDefinition& skeletonAiDefinition,
-                                               const CharacterDefinition& skeletonDefinition, float dt);
+std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt);
 
 // World-space only -- call between BeginCameraMode/EndCameraMode.
-void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssets& knightAssets,
-                      const CharacterAssets& skeletonAssets);
+void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets);
 
 // LevelCamera.gd's get_current_x_bounds(): the active zone's own span while
 // an encounter is in progress, or the full explored span otherwise.
