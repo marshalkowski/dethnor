@@ -84,10 +84,11 @@ MovementBounds ComputeMovementBounds(const LevelRuntime& level, engine::Vec2 pos
 void SpawnWave(ZoneRuntime& zone, const CharacterDefinition& skeletonDefinition, engine::Vec2 playerPosition) {
     const WaveDefinition& wave = zone.definition->waves[static_cast<std::size_t>(zone.currentWaveIndex)];
     const engine::Rect& spawnRect = zone.definition->spawnRect;
+    const int totalCount = wave.TotalEnemyCount();
     zone.enemies.clear();
-    zone.enemies.reserve(static_cast<std::size_t>(wave.count));
-    for (int i = 0; i < wave.count; ++i) {
-        const float t = (wave.count > 1) ? static_cast<float>(i) / static_cast<float>(wave.count - 1) : 0.5f;
+    zone.enemies.reserve(static_cast<std::size_t>(totalCount));
+    for (int i = 0; i < totalCount; ++i) {
+        const float t = (totalCount > 1) ? static_cast<float>(i) / static_cast<float>(totalCount - 1) : 0.5f;
         const engine::Vec2 worldPosition{zone.worldOffsetX + spawnRect.x + t * spawnRect.width,
                                           spawnRect.y + spawnRect.height * 0.5f};
         zone.enemies.emplace_back(skeletonDefinition, worldPosition, 1);
@@ -242,7 +243,7 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
     return level;
 }
 
-std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const SkeletonAIDefinition& skeletonAiDefinition,
+std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const AIDefinition& skeletonAiDefinition,
                                                const CharacterDefinition& skeletonDefinition, float dt) {
     const CharacterDefinition& knightDefinition = *level.player.definition;
     const MovementBounds playerBounds = ComputeMovementBounds(level, level.player.position,

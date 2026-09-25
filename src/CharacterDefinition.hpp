@@ -2,7 +2,12 @@
 
 #include "ActionDefinition.hpp"
 #include "Command.hpp"
+#include "AIDefinition.hpp"
 #include "engine/Engine.hpp"
+
+#include <array>
+#include <string>
+#include <vector>
 
 namespace dethnor {
 
@@ -68,30 +73,31 @@ struct CharacterDefinition {
     engine::AnimationClip hurtClip;  // "knockback" pose, shared by Knockback+Stunned
     engine::AnimationClip deathClip; // "fall"
 
-    const char* idleAsset;
-    const char* walkAsset;
-    const char* hurtAsset;
-    const char* deathAsset;
+    std::string idleAsset;
+    std::string walkAsset;
+    std::string hurtAsset;
+    std::string deathAsset;
 
     // base_controller.gd's get_action(): iterated in this exact order, first
     // buffered command that matches wins -- order is real tie-break priority
     // (see M2 report's InputBuffer::Consume discussion for why this matters
     // for the Knight's light attack specifically).
-    static constexpr int maxActions = 4;
-    std::array<ActionBinding, maxActions> actions{};
-    int actionCount = 0;
+    std::vector<ActionBinding> actions;
+
+    // CharacterConfig.ai_config; null for the player (no AIController).
+    const AIDefinition* ai = nullptr;
 };
 
 // --- Knight (data/character_configs/players/player_knight.tres; every
 // numeric field below is a CharacterConfig default -- the Knight's own
 // resource only overrides name/frames/actions) ---
 
-inline constexpr std::array<ActionBinding, 4> knightActions{{
+inline const std::vector<ActionBinding> knightActions{
     {Command::LightForward, &knightQuickStab},
     {Command::Light, &knightSwordSlash1},
     {Command::Heavy, &knightSwordOverhead},
     {Command::Block, &knightBasicBlock},
-}};
+};
 
 inline CharacterDefinition MakeKnightDefinition() {
     CharacterDefinition def{};
@@ -128,18 +134,14 @@ inline CharacterDefinition MakeKnightDefinition() {
     def.hurtAsset = "sprites/characters/knight/MBEU_character_knight-Hit.png";
     def.deathAsset = "sprites/characters/knight/MBEU_character_knight-Fall.png";
     def.actions = knightActions;
-    def.actionCount = 4;
     return def;
 }
 
 // --- Skeleton (data/character_configs/enemies/enemy_skeleton.tres) ---
 
-inline constexpr std::array<ActionBinding, 4> skeletonActions{{
+inline const std::vector<ActionBinding> skeletonActions{
     {Command::Light, &skeletonSwordSlash1},
-    {},
-    {},
-    {},
-}};
+};
 
 inline CharacterDefinition MakeSkeletonDefinition() {
     CharacterDefinition def{};
@@ -176,7 +178,6 @@ inline CharacterDefinition MakeSkeletonDefinition() {
     def.hurtAsset = "sprites/characters/skeleton/MBEU_character_skeleton-Hit.png";
     def.deathAsset = "sprites/characters/skeleton/MBEU_character_skeleton-Fall.png";
     def.actions = skeletonActions;
-    def.actionCount = 1;
     return def;
 }
 

@@ -19,7 +19,7 @@ float WeightedDistance(engine::Vec2 a, engine::Vec2 b) {
 } // namespace
 
 void UpdateSkeletonAI(Character& skeleton, const Character& target, SkeletonAIRuntime& ai,
-                       const SkeletonAIDefinition& def, float dt) {
+                       const AIDefinition& def, float dt) {
     // ai_state_machine.gd's _process: "if owner_character.is_dead(): return"
     // -- a dead character makes no further decisions at all. Without this,
     // UpdateCharacter's own Dead-state early return still stops the corpse

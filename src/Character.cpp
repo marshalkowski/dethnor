@@ -16,9 +16,9 @@ float Sign(float value) {
 // mapping a currently-playing action back to its pre-loaded texture in
 // CharacterAssets::actionTextures (same order, built in LoadCharacterAssets).
 int ActionTextureIndex(const CharacterDefinition& def, const ActionDefinition* action) {
-    for (int i = 0; i < def.actionCount; ++i) {
+    for (std::size_t i = 0; i < def.actions.size(); ++i) {
         if (def.actions[i].action == action) {
-            return i;
+            return static_cast<int>(i);
         }
     }
     return -1;
@@ -100,8 +100,7 @@ void UpdateMovement(Character& character, const MovementBounds& bounds, float dt
 // get_action(): first buffered command any bound action can Consume() wins,
 // in the character's own authored action order.
 const ActionBinding* TryResolveAction(Character& character) {
-    for (int i = 0; i < character.definition->actionCount; ++i) {
-        const ActionBinding& binding = character.definition->actions[i];
+    for (const ActionBinding& binding : character.definition->actions) {
         if (character.inputBuffer.Consume(binding.command)) {
             return &binding;
         }
@@ -145,7 +144,7 @@ void UpdateAction(Character& character, float dt) {
         ++character.actionFrameIndex;
     }
 
-    const bool finished = character.actionFrameIndex >= action.frameCount;
+    const bool finished = character.actionFrameIndex >= action.FrameCount();
     const bool released = action.sustainable && !character.sustainInputHeld;
     if ((!action.sustainable && finished) || (action.sustainable && released)) {
         character.state = CombatState::Idle;
@@ -310,15 +309,15 @@ CharacterAssets LoadCharacterAssets(engine::Engine& app, const CharacterDefiniti
     // CharacterAssets can't be default-constructed then filled in --
     // everything is gathered first and returned via aggregate init instead.
     std::vector<engine::TextureHandle> actionTextures;
-    actionTextures.reserve(static_cast<std::size_t>(def.actionCount));
-    for (int i = 0; i < def.actionCount; ++i) {
-        actionTextures.push_back(app.LoadTexture(def.actions[i].action->textureAsset));
+    actionTextures.reserve(def.actions.size());
+    for (const ActionBinding& binding : def.actions) {
+        actionTextures.push_back(app.LoadTexture(binding.action->textureAsset.c_str()));
     }
     return CharacterAssets{
-        .idleTexture = app.LoadTexture(def.idleAsset),
-        .walkTexture = app.LoadTexture(def.walkAsset),
-        .hurtTexture = app.LoadTexture(def.hurtAsset),
-        .deathTexture = app.LoadTexture(def.deathAsset),
+        .idleTexture = app.LoadTexture(def.idleAsset.c_str()),
+        .walkTexture = app.LoadTexture(def.walkAsset.c_str()),
+        .hurtTexture = app.LoadTexture(def.hurtAsset.c_str()),
+        .deathTexture = app.LoadTexture(def.deathAsset.c_str()),
         .actionTextures = std::move(actionTextures),
     };
 }
@@ -350,7 +349,7 @@ void DrawCharacter(engine::Engine& app, const Character& character, const Charac
             const ActionDefinition& action = *character.currentAction;
             const int index = ActionTextureIndex(*character.definition, character.currentAction);
             texture = (index >= 0) ? assets.actionTextures[static_cast<std::size_t>(index)] : assets.idleTexture;
-            const int frameIndex = std::min(character.actionFrameIndex, action.frameCount - 1);
+            const int frameIndex = std::min(character.actionFrameIndex, action.FrameCount() - 1);
             const int column = action.frameColumns[static_cast<std::size_t>(frameIndex)];
             frame = engine::Rect{static_cast<float>(column) * action.frameWidth, 0.0f, action.frameWidth,
                                   action.frameHeight};

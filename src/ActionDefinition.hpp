@@ -2,7 +2,8 @@
 
 #include "engine/Engine.hpp"
 
-#include <array>
+#include <string>
+#include <vector>
 
 namespace dethnor {
 
@@ -26,19 +27,17 @@ enum class ActionKind { Attack, Block };
 // let it auto-advance), so Character.cpp uses ordinary engine::Animation for
 // those instead -- this split mirrors Godot's own architecture exactly, not
 // an invented asymmetry.
-constexpr std::size_t maxActionFrames = 8;
-
 struct ActionDefinition {
     ActionKind kind;
 
-    const char* textureAsset;
-    float frameWidth;
-    float frameHeight;
+    std::string textureAsset;
+    float frameWidth = 0.0f;
+    float frameHeight = 0.0f;
 
-    // Texture-column index (frameWidth-wide slices) for each logical frame,
-    // 0..frameCount-1. A repeated column value holds that pose for longer.
-    std::array<int, maxActionFrames> frameColumns{};
-    int frameCount = 0;
+    // Texture-column index (frameWidth-wide slices) for each logical frame.
+    // A repeated column value holds that pose for longer. The logical frame
+    // count is frameColumns.size().
+    std::vector<int> frameColumns;
     float frameDuration = 0.05f; // ActionData.frame_rate default
 
     // Inclusive logical-frame range during which the hitbox is active; -1/-1
@@ -65,19 +64,20 @@ struct ActionDefinition {
     // action_finished) or (sustainable and input released)").
     bool sustainable = false;
     float sustainStaminaCostPerSec = 0.0f;
+
+    int FrameCount() const { return static_cast<int>(frameColumns.size()); }
 };
 
 // --- Knight (data/attacks/quick_stab.tres, sword_slash_1.tres,
 // sword_overhead.tres, data/blocks/basic_block.tres) ---
 
 // "strike" clip (Strike-Fwd.png): 4 frames, columns 1-4, no repeats.
-inline constexpr ActionDefinition knightQuickStab{
+inline const ActionDefinition knightQuickStab{
     .kind = ActionKind::Attack,
     .textureAsset = "sprites/characters/knight/MBEU_character_knight-Strike-Fwd.png",
     .frameWidth = 128.0f,
     .frameHeight = 64.0f,
     .frameColumns = {1, 2, 3, 4},
-    .frameCount = 4,
     .frameDuration = 0.04f,
     .activeFrameStart = 1,
     .activeFrameEnd = 3,
@@ -89,13 +89,12 @@ inline constexpr ActionDefinition knightQuickStab{
 };
 
 // "slash_1_smear" clip (LSlash-1-smear.png): 4 frames, columns 1-4, no repeats.
-inline constexpr ActionDefinition knightSwordSlash1{
+inline const ActionDefinition knightSwordSlash1{
     .kind = ActionKind::Attack,
     .textureAsset = "sprites/characters/knight/MBEU_character_knight-LSlash-1-smear.png",
     .frameWidth = 128.0f,
     .frameHeight = 64.0f,
     .frameColumns = {1, 2, 3, 4},
-    .frameCount = 4,
     .frameDuration = 0.05f,
     .activeFrameStart = 1,
     .activeFrameEnd = 2,
@@ -112,13 +111,12 @@ inline constexpr ActionDefinition knightSwordSlash1{
 // "strike_overhead" clip (Strike-Overhead.png): 8 logical frames -- columns
 // 0,1,1,1,2,3,3,3 (the impact pose, column 3, is held for active_frames
 // 5-7, exactly matching the source's repeated AtlasTexture references).
-inline constexpr ActionDefinition knightSwordOverhead{
+inline const ActionDefinition knightSwordOverhead{
     .kind = ActionKind::Attack,
     .textureAsset = "sprites/characters/knight/MBEU_character_knight-Strike-Overhead.png",
     .frameWidth = 128.0f,
     .frameHeight = 64.0f,
     .frameColumns = {0, 1, 1, 1, 2, 3, 3, 3},
-    .frameCount = 8,
     .frameDuration = 0.05f,
     .activeFrameStart = 5,
     .activeFrameEnd = 7,
@@ -134,13 +132,12 @@ inline constexpr ActionDefinition knightSwordOverhead{
 // window (basic_block.tres's active_frames is empty -- see ActionDataState's
 // dead block_active(), confirmed never consulted; the real block check is
 // BaseCharacter.is_blocking(), a facing check with no frame gating at all).
-inline constexpr ActionDefinition knightBasicBlock{
+inline const ActionDefinition knightBasicBlock{
     .kind = ActionKind::Block,
     .textureAsset = "sprites/characters/knight/MBEU_character_knight-Block.png",
     .frameWidth = 128.0f,
     .frameHeight = 64.0f,
     .frameColumns = {1, 2, 3, 4, 5},
-    .frameCount = 5,
     .frameDuration = 0.05f,
     .sustainable = true,
     .sustainStaminaCostPerSec = 5.0f,
@@ -156,13 +153,12 @@ inline constexpr ActionDefinition knightBasicBlock{
 // as a content bug, not a deliberate design -- fixed here to point at the
 // Skeleton's real "slash_1" clip, keeping every other value identical to the
 // source AttackData (approved fix, see M2 report).
-inline constexpr ActionDefinition skeletonSwordSlash1{
+inline const ActionDefinition skeletonSwordSlash1{
     .kind = ActionKind::Attack,
     .textureAsset = "sprites/characters/skeleton/MBEU_character_skeleton-LSlash-1.png",
     .frameWidth = 128.0f,
     .frameHeight = 64.0f,
     .frameColumns = {1, 2, 3, 4, 5},
-    .frameCount = 5,
     .frameDuration = 0.05f,
     .activeFrameStart = 1,
     .activeFrameEnd = 2,

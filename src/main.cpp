@@ -70,7 +70,7 @@ int main() {
     const dethnor::CharacterAssets skeletonAssets = dethnor::LoadCharacterAssets(app, skeletonDefinition);
     const dethnor::HudAssets hudAssets = dethnor::LoadHudAssets(app);
     const dethnor::TitleScreenAssets titleAssets = dethnor::LoadTitleScreenAssets(app);
-    const dethnor::SkeletonAIDefinition skeletonAiDefinition{};
+    const dethnor::AIDefinition skeletonAiDefinition{};
 
     // GameManager's real lifetime: a single instance for the whole process,
     // never reset when returning to the title screen. This is a deliberate,

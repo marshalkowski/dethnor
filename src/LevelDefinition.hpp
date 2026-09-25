@@ -15,21 +15,27 @@ struct SpawnPointDefinition {
     bool faceLeft = false;
 };
 
-// Only Skeleton is a migrated, combat-capable enemy as of M2/M3. Godot's
-// WaveSpawnData references an arbitrary CharacterConfig resource; this enum
-// stands in for that same idea, sized to what's actually implemented rather
-// than a general registry (see the M3 report on unsupported enemy
-// substitution).
-enum class EnemyType { Skeleton };
-
-// WaveData/WaveSpawnData, simplified to a single enemy group per wave --
-// every wave in the migrated content (world1_level1's two zones) only ever
-// spawns one enemy type, so an array of groups would be unexercised
-// generality. M4/a later milestone can widen this if real multi-group wave
-// content is ever migrated.
-struct WaveDefinition {
-    EnemyType enemyType = EnemyType::Skeleton;
+// WaveSpawnData: one enemy type + how many of it. enemyId is a
+// ContentLibrary::characters key (Godot holds an enemy_config resource
+// reference instead); resolved by LoadContent's validation pass, so a wave
+// can never name an enemy that doesn't exist.
+struct WaveSpawnGroup {
+    std::string enemyId;
     int count = 1;
+};
+
+// WaveData: every group spawns together when the wave starts. (WaveData's
+// boss_title is not ported yet -- it drives the boss banner, an M5 item.)
+struct WaveDefinition {
+    std::vector<WaveSpawnGroup> groups;
+
+    int TotalEnemyCount() const {
+        int total = 0;
+        for (const WaveSpawnGroup& group : groups) {
+            total += group.count;
+        }
+        return total;
+    }
 };
 
 // ZoneData + the geometry ZoneRuntime derives from it. Definition only --
@@ -75,16 +81,13 @@ struct ZoneDefinition {
 // unset means a solid wall at that edge, matching level_bounds.gd's
 // _set_wall() branch).
 struct LevelDefinition {
-    const char* bgSet = "world_1";
+    std::string bgSet = "world_1";
     std::vector<ZoneDefinition> zones;
     std::optional<Destination> leftDestination;
     std::optional<Destination> rightDestination;
 };
 
-// Looks up a LevelDefinition by (world, level) -- data/levels/*.tres's real
-// equivalent is Godot's `load("res://data/levels/" + level_string() +
-// ".tres")`; this is that same lookup over the two levels actually migrated
-// (see the M3 report for why exactly these two and not more).
+// Interim (removed in M4 step 4, when levels come from ContentLibrary).
 const LevelDefinition& GetLevelDefinition(int world, int level);
 
 } // namespace dethnor

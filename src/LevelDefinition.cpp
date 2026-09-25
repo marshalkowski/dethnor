@@ -23,7 +23,7 @@ ZoneDefinition MakeLevel1Zone0() {
         SpawnPointDefinition{"ps0", engine::Vec2{113.0f, 151.0f}, false},
     };
     zone.waves = {
-        WaveDefinition{EnemyType::Skeleton, 1},
+        WaveDefinition{{WaveSpawnGroup{"skeleton", 1}}},
     };
     return zone;
 }
@@ -45,7 +45,7 @@ ZoneDefinition MakeLevel1Zone1() {
         SpawnPointDefinition{"ps1", engine::Vec2{201.0f, 100.0f}, true},
     };
     zone.waves = {
-        WaveDefinition{EnemyType::Skeleton, 2},
+        WaveDefinition{{WaveSpawnGroup{"skeleton", 2}}},
     };
     return zone;
 }

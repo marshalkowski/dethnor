@@ -131,7 +131,7 @@ struct CharacterAssets {
     engine::TextureHandle walkTexture;
     engine::TextureHandle hurtTexture;
     engine::TextureHandle deathTexture;
-    // Parallel to CharacterDefinition::actions[0..actionCount-1].
+    // Parallel to CharacterDefinition::actions.
     std::vector<engine::TextureHandle> actionTextures;
 };
 

@@ -104,7 +104,7 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
 // exit this frame (a zone's opened door, or an open level-edge boundary) --
 // the caller (the Gameplay app state) owns actually tearing down and
 // rebuilding for it, matching M3's state-ownership requirement.
-std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const SkeletonAIDefinition& skeletonAiDefinition,
+std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, const AIDefinition& skeletonAiDefinition,
                                                const CharacterDefinition& skeletonDefinition, float dt);
 
 // World-space only -- call between BeginCameraMode/EndCameraMode.

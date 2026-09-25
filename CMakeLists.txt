@@ -22,6 +22,7 @@ add_executable(dungeons-of-dethnor
     src/main.cpp
     src/Character.cpp
     src/CombatSystem.cpp
+    src/Content.cpp
     src/SkeletonAI.cpp
     src/PlayerControl.cpp
     src/LevelDefinition.cpp
