@@ -222,6 +222,7 @@ Character SpawnCharacter(const CharacterDefinition& def, engine::Vec2 position, 
     character.facing = facing;
     character.hitPoints = def.maxHitPoints;
     character.stamina = def.maxStamina;
+    character.magicPoints = def.maxMagicPoints;
     return character;
 }
 

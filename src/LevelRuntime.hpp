@@ -67,6 +67,15 @@ struct ZoneRuntime {
     float WorldRight() const { return worldOffsetX + WorldWidth(); }
 };
 
+// The four sprites a level draws with. TextureHandle has no default
+// constructor (see Engine.hpp), so these travel together as one aggregate.
+struct LevelTextures {
+    engine::TextureHandle background;
+    engine::TextureHandle sideWall;
+    engine::TextureHandle doorShut;
+    engine::TextureHandle doorOpen;
+};
+
 // LevelData + LevelRuntime's build/spawn logic. Owns every zone for the
 // current level and the player themselves (matching the source: the entire
 // level_runtime.tscn subtree, player included, is torn down and rebuilt
@@ -80,19 +89,15 @@ struct LevelRuntime {
     Character player;
     CombatWorld combatWorld;
 
-    engine::TextureHandle backgroundTexture;
-    engine::TextureHandle sideWallTexture;
-    engine::TextureHandle doorShutTexture;
-    engine::TextureHandle doorOpenTexture;
+    // Drawing assets. Absent until LoadLevelTextures runs, so the level's
+    // logic (zones, waves, doors, transitions) can be built and stepped
+    // without a window -- see tests/level_flow.cpp.
+    std::optional<LevelTextures> textures;
 
-    // TextureHandle has no default constructor (see Engine.hpp), so every
-    // texture member must be supplied up front, the same way Character's
-    // own constructor requires a real CharacterDefinition for its Animation
-    // members.
-    LevelRuntime(const CharacterDefinition& playerDefinition, engine::TextureHandle background,
-                 engine::TextureHandle sideWall, engine::TextureHandle doorShut, engine::TextureHandle doorOpen)
-        : player(SpawnCharacter(playerDefinition, {}, 1)), backgroundTexture(background), sideWallTexture(sideWall),
-          doorShutTexture(doorShut), doorOpenTexture(doorOpen) {}
+    // Character has no default constructor (its Animation members need a real
+    // CharacterDefinition's clips), so the player is spawned up front.
+    explicit LevelRuntime(const CharacterDefinition& playerDefinition)
+        : player(SpawnCharacter(playerDefinition, {}, 1)) {}
 };
 
 // Builds a fresh LevelRuntime for `destination`, spawning the player at the
@@ -101,8 +106,10 @@ struct LevelRuntime {
 // LevelRuntime._spawn_player()'s fresh-game fallback) and restoring cached
 // HP/stamina from `session` if present (GameManager.load_player()).
 LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionState& session,
-                                const ContentLibrary& content, const CharacterDefinition& playerDefinition,
-                                engine::Engine& app);
+                                const ContentLibrary& content, const CharacterDefinition& playerDefinition);
+
+// Loads the level's background/wall/door art (required before drawing).
+void LoadLevelTextures(LevelRuntime& level, engine::Engine& app);
 
 // Per-frame update: player/enemy AI+control feed-in is the caller's job
 // (PlayerControl/EnemyAI, called before this); this advances every

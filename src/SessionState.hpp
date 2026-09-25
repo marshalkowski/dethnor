@@ -38,6 +38,7 @@ struct SessionState {
     bool hasCachedPlayerStats = false;
     float cachedHitPoints = 0.0f;
     float cachedStamina = 0.0f;
+    float cachedMagicPoints = 0.0f;
 
     // cache_destination/load_destination. Unset on a fresh game (matches
     // LevelRuntime._load_level()'s `if GameManager.load_destination() ==
@@ -50,6 +51,16 @@ inline void CachePlayerStats(SessionState& session, const Character& player) {
     session.hasCachedPlayerStats = true;
     session.cachedHitPoints = player.hitPoints;
     session.cachedStamina = player.stamina;
+    session.cachedMagicPoints = player.magicPoints;
+}
+
+// What crossing a door or level edge carries into the next level:
+// GameManager.cache_player + cache_destination. The next BuildLevelRuntime
+// spawns the player at `exit`'s spawn point with these stats restored.
+inline void EnterDestination(SessionState& session, const Character& player, const Destination& exit) {
+    CachePlayerStats(session, player);
+    session.hasDestination = true;
+    session.destination = exit;
 }
 
 } // namespace dethnor

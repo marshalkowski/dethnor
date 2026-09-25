@@ -43,6 +43,7 @@ struct Character {
     float hitPoints = 0.0f;
     float stamina = 0.0f;
     float staminaRechargeTimer = 0.0f;
+    float magicPoints = 0.0f; // BaseCharacter.magic_points; nothing spends it until the Wizard (M5)
 
     CombatState state = CombatState::Idle;
 

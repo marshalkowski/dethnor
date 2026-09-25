@@ -82,6 +82,14 @@ int main() {
     // destination rather than a fresh level-1 spawn. See the M3 report.
     dethnor::SessionState session;
 
+    // Builds a level for `destination` from the current session (spawn point +
+    // carried HP/stamina/MP) and loads its art.
+    const auto StartLevel = [&](const dethnor::Destination& destination) {
+        dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, content, knightDefinition);
+        dethnor::LoadLevelTextures(level, app);
+        return level;
+    };
+
     AppState state = AppState::TitleScreen;
     std::optional<dethnor::TitleScreenState> titleScreen(dethnor::TitleScreenState{});
     std::optional<GameplaySession> gameplay;
@@ -99,7 +107,7 @@ int main() {
                 session.playerClass = dethnor::PlayerClass::Knight;
                 const dethnor::Destination start{1, 1, "ps0"};
                 const dethnor::Destination& destination = session.hasDestination ? session.destination : start;
-                dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, content, knightDefinition, app);
+                dethnor::LevelRuntime level = StartLevel(destination);
                 dethnor::LevelCamera camera = MakeCameraForLevel(level);
                 gameplay.emplace(GameplaySession{std::move(level), std::move(camera), -1.0f});
                 titleScreen.reset();
@@ -123,10 +131,8 @@ int main() {
                 dethnor::UpdatePlayerControl(g.level.player, app);
                 if (const std::optional<dethnor::Destination> exit =
                         dethnor::UpdateLevelRuntime(g.level, dt)) {
-                    dethnor::CachePlayerStats(session, g.level.player);
-                    session.hasDestination = true;
-                    session.destination = *exit;
-                    g.level = dethnor::BuildLevelRuntime(*exit, session, content, knightDefinition, app);
+                    dethnor::EnterDestination(session, g.level.player, *exit);
+                    g.level = StartLevel(*exit);
                     g.camera = MakeCameraForLevel(g.level);
                 }
             }

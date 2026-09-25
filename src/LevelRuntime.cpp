@@ -194,19 +194,23 @@ std::optional<Destination> CheckLevelExit(const LevelRuntime& level) {
 
 } // namespace
 
+void LoadLevelTextures(LevelRuntime& level, engine::Engine& app) {
+    const std::string& bgSet = level.definition->bgSet;
+    const std::string bgDir = std::string("sprites/bg/") + bgSet + "/";
+    level.textures = LevelTextures{
+        .background = app.LoadTexture((bgDir + bgSet + "_bg.png").c_str()),
+        .sideWall = app.LoadTexture((bgDir + bgSet + "_side_wall.png").c_str()),
+        // Door art is shared across levels, not per-bg_set (assets/sprites/bg/MBEU_door-*.png).
+        .doorShut = app.LoadTexture("sprites/bg/MBEU_door-Shut.png"),
+        .doorOpen = app.LoadTexture("sprites/bg/MBEU_door-Open.png"),
+    };
+}
+
 LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionState& session,
-                                const ContentLibrary& content, const CharacterDefinition& playerDefinition,
-                                engine::Engine& app) {
+                                const ContentLibrary& content, const CharacterDefinition& playerDefinition) {
     const LevelDefinition& def = content.Level(destination.world, destination.level);
 
-    const std::string bgDir = std::string("sprites/bg/") + def.bgSet + "/";
-    const engine::TextureHandle backgroundTexture = app.LoadTexture((bgDir + def.bgSet + "_bg.png").c_str());
-    const engine::TextureHandle sideWallTexture = app.LoadTexture((bgDir + def.bgSet + "_side_wall.png").c_str());
-    // Door art is shared across levels, not per-bg_set (assets/sprites/bg/MBEU_door-*.png).
-    const engine::TextureHandle doorShutTexture = app.LoadTexture("sprites/bg/MBEU_door-Shut.png");
-    const engine::TextureHandle doorOpenTexture = app.LoadTexture("sprites/bg/MBEU_door-Open.png");
-
-    LevelRuntime level(playerDefinition, backgroundTexture, sideWallTexture, doorShutTexture, doorOpenTexture);
+    LevelRuntime level(playerDefinition);
     level.currentDestination = destination;
     level.content = &content;
     level.definition = &def;
@@ -237,13 +241,14 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
         level.player.facing = spawnPoint->faceLeft ? -1 : 1;
     }
 
-    // GameManager.load_player(): restore cached HP/stamina if this isn't the
-    // very first level of a fresh session (SpawnCharacter, called by
+    // GameManager.load_player(): restore cached HP/stamina/MP if this isn't
+    // the very first level of a fresh session (SpawnCharacter, called by
     // LevelRuntime's constructor, already left them at the definition's
     // maxima otherwise).
     if (session.hasCachedPlayerStats) {
         level.player.hitPoints = session.cachedHitPoints;
         level.player.stamina = session.cachedStamina;
+        level.player.magicPoints = session.cachedMagicPoints;
     }
 
     return level;
@@ -318,22 +323,23 @@ void GetCameraBounds(const LevelRuntime& level, float& outMinX, float& outMaxX) 
 }
 
 void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets) {
-    const float bgWidth = static_cast<float>(app.TextureWidth(level.backgroundTexture));
+    const LevelTextures& textures = *level.textures;
+    const float bgWidth = static_cast<float>(app.TextureWidth(textures.background));
     for (const ZoneRuntime& zone : level.zones) {
         for (int i = 0; i < zone.definition->sizeInScreens; ++i) {
-            app.DrawSprite(level.backgroundTexture, zone.worldOffsetX + bgWidth * static_cast<float>(i), 0.0f);
+            app.DrawSprite(textures.background, zone.worldOffsetX + bgWidth * static_cast<float>(i), 0.0f);
         }
     }
 
-    const float sideWallWidth = static_cast<float>(app.TextureWidth(level.sideWallTexture));
-    const float sideWallHeight = static_cast<float>(app.TextureHeight(level.sideWallTexture));
+    const float sideWallWidth = static_cast<float>(app.TextureWidth(textures.sideWall));
+    const float sideWallHeight = static_cast<float>(app.TextureHeight(textures.sideWall));
     for (const ZoneRuntime& zone : level.zones) {
         if (zone.definition->hasLeftWall) {
-            app.DrawSpriteRegion(level.sideWallTexture, engine::Rect{0.0f, 0.0f, -sideWallWidth, sideWallHeight},
+            app.DrawSpriteRegion(textures.sideWall, engine::Rect{0.0f, 0.0f, -sideWallWidth, sideWallHeight},
                                   zone.worldOffsetX, 0.0f);
         }
         if (zone.definition->hasRightWall) {
-            app.DrawSprite(level.sideWallTexture, zone.WorldRight() - sideWallWidth, 0.0f);
+            app.DrawSprite(textures.sideWall, zone.WorldRight() - sideWallWidth, 0.0f);
         }
     }
 
@@ -355,7 +361,7 @@ void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const Char
         // put it too low -- see the M3 follow-up fix thread.
         const float doorDrawY = wallHeight - doorHeight;
         if (zone.doorOpenAnimation.has_value()) {
-            app.DrawSpriteRegion(level.doorOpenTexture, zone.doorOpenAnimation->CurrentFrameRect(), doorDrawX,
+            app.DrawSpriteRegion(textures.doorOpen, zone.doorOpenAnimation->CurrentFrameRect(), doorDrawX,
                                   doorDrawY);
         } else {
             // MBEU_door-Shut.png is 192x128 = 3 frames, matching
@@ -364,7 +370,7 @@ void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const Char
             // earlier attempt) is the animation's start, i.e. still open;
             // the resting "shut" pose is the LAST frame.
             constexpr float shutRestFrameIndex = 2.0f;
-            app.DrawSpriteRegion(level.doorShutTexture,
+            app.DrawSpriteRegion(textures.doorShut,
                                   engine::Rect{shutRestFrameIndex * doorWidth, 0.0f, doorWidth, doorHeight},
                                   doorDrawX, doorDrawY);
         }

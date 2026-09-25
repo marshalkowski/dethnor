@@ -83,3 +83,20 @@ target_compile_definitions(dethnor-ai-sim PRIVATE
     DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )
 add_test(NAME ai-sim COMMAND dethnor-ai-sim)
+
+# Headless level flow: door/spawn/session chaining across world1's levels,
+# plus a scripted bot playing each level through to its exit.
+add_executable(dethnor-level-flow
+    tests/level_flow.cpp
+    src/Content.cpp
+    src/Character.cpp
+    src/CombatSystem.cpp
+    src/EnemyAI.cpp
+    src/LevelRuntime.cpp
+)
+target_link_libraries(dethnor-level-flow PRIVATE bengine nlohmann_json)
+target_include_directories(dethnor-level-flow PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+target_compile_definitions(dethnor-level-flow PRIVATE
+    DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+add_test(NAME level-flow COMMAND dethnor-level-flow)
