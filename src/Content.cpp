@@ -122,10 +122,29 @@ ActionDefinition ParseAction(const json& j) {
 
 AIDefinition ParseAI(const json& j) {
     AIDefinition ai;
-    ai.detectRange = Opt(j, "detect_range", ai.detectRange);
-    ai.attackEnterRange = Opt(j, "attack_enter_range", ai.attackEnterRange);
-    ai.attackExitRange = Opt(j, "attack_exit_range", ai.attackExitRange);
-    ai.attackCooldown = Opt(j, "attack_cooldown", ai.attackCooldown);
+    const std::string startMode = Opt(j, "start_mode", std::string("active"));
+    if (startMode != "active" && startMode != "dormant") {
+        throw std::runtime_error("\"start_mode\" must be \"active\" or \"dormant\", got \"" + startMode + "\"");
+    }
+    ai.startDormant = (startMode == "dormant");
+    ai.detectRange = Opt(j, "detect_range", 0.0f);
+    ai.approach = Opt(j, "approach", true);
+    for (const json& entry : j.at("attacks")) {
+        AIAttackOption option;
+        option.command = CommandFrom(entry.at("command").get<std::string>());
+        option.enterRange = entry.at("range").get<float>();
+        option.exitRange = Opt(entry, "exit_range", option.enterRange);
+        option.cooldown = Opt(entry, "cooldown", 0.0f);
+        option.weight = Opt(entry, "weight", 1.0f);
+        option.faceTarget = Opt(entry, "face_target", false);
+        if (option.exitRange > option.enterRange) {
+            throw std::runtime_error("\"exit_range\" must not exceed \"range\"");
+        }
+        ai.attacks.push_back(option);
+    }
+    if (ai.attacks.empty()) {
+        throw std::runtime_error("an AI needs at least one attack");
+    }
     return ai;
 }
 
@@ -198,6 +217,9 @@ CharacterDefinition ParseCharacter(const json& j, const ContentLibrary& library)
     }
     def.hurtClip = ParseClip(animations.at("knockback"), frameSize, def.hurtAsset, false);
     def.deathClip = ParseClip(animations.at("fall"), frameSize, def.deathAsset, false);
+    if (animations.contains("dormant")) {
+        def.dormantClip = ParseClip(animations.at("dormant"), frameSize, def.dormantAsset, false);
+    }
 
     // CharacterConfig.actions: ActionPair(command, action). Order matters
     // (first buffered command that matches wins), so it is preserved.
@@ -217,6 +239,23 @@ CharacterDefinition ParseCharacter(const json& j, const ContentLibrary& library)
             throw std::runtime_error("unknown ai_config \"" + aiId + "\"");
         }
         def.ai = &ai->second;
+    }
+
+    // Every attack option must be something the character can actually
+    // perform: the command has to be bound in its own action list.
+    if (def.ai != nullptr) {
+        for (const AIAttackOption& option : def.ai->attacks) {
+            bool bound = false;
+            for (const ActionBinding& binding : def.actions) {
+                bound = bound || binding.command == option.command;
+            }
+            if (!bound) {
+                throw std::runtime_error("ai_config \"" + aiId + "\" issues a command this character has no action for");
+            }
+        }
+        if (def.ai->startDormant && def.dormantAsset.empty()) {
+            throw std::runtime_error("a dormant-start ai_config needs a \"dormant\" animation");
+        }
     }
     return def;
 }

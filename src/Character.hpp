@@ -15,7 +15,7 @@ namespace dethnor {
 // Idle/Walk/Attack/Block/Knockback/Stunned/Dead (character_state_machine.gd's
 // state set, minus Cast -- no caster in this milestone). This is the
 // character's own combat state, distinct from an AI's intent (see
-// SkeletonAI.hpp): "Attack" here means "I am currently executing an attack
+// EnemyAI.hpp): "Attack" here means "I am currently executing an attack
 // action," not "I have decided I want to attack."
 enum class CombatState { Idle, Walk, Attack, Block, Knockback, Stunned, Dead };
 
@@ -73,12 +73,21 @@ struct Character {
     bool isFrozen = false; // hit-stop
     float hitStopTimer = 0.0f;
 
-    // Set by PlayerControl/SkeletonAI before UpdateCharacter runs each frame;
+    // Set by PlayerControl/EnemyAI before UpdateCharacter runs each frame;
     // consumed (not read again) by UpdateCharacter. Already normalized to
     // magnitude <= 1 by the caller -- UpdateCharacter applies Walk.gd's own
     // Y-halving and speed multiplication, matching the player and the
     // Skeleton to the exact same movement rule.
     engine::Vec2 pendingMovement{};
+
+    // base_character.gd's hit_last_frame: set when a hit lands on this
+    // character (before the block check, as in the source), consumed by its
+    // AI (see EnemyAI.cpp) -- which is what wakes a dormant enemy.
+    bool wasHit = false;
+
+    // Display-only: set by the AI while a Dormant enemy sits inert, so idle
+    // draws the character's "dormant" pose instead of its idle animation.
+    bool dormant = false;
 
     InputBuffer inputBuffer;
 
@@ -135,6 +144,8 @@ struct CharacterAssets {
     engine::TextureHandle walkTexture;
     engine::TextureHandle hurtTexture;
     engine::TextureHandle deathTexture;
+    // Same as idleTexture for a character with no "dormant" animation.
+    engine::TextureHandle dormantTexture;
     // Parallel to CharacterDefinition::actions.
     std::vector<engine::TextureHandle> actionTextures;
 };

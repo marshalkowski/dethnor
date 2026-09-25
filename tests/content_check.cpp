@@ -4,6 +4,7 @@
 
 #include "CharacterDefinition.hpp"
 #include "Content.hpp"
+#include "TestUtil.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -19,20 +20,8 @@ namespace {
 namespace fs = std::filesystem;
 using namespace dethnor;
 
-int failures = 0;
-
-void Fail(const std::string& message) {
-    std::printf("FAIL: %s\n", message.c_str());
-    ++failures;
-}
-
-void Check(bool condition, const std::string& message) {
-    if (!condition) {
-        Fail(message);
-    }
-}
-
-bool Near(float a, float b) { return std::fabs(a - b) < 1.0e-5f; }
+using testutil::Check;
+using testutil::Fail;
 
 // --- PNG sheet dimensions (IHDR: width/height are big-endian at 16/20) ----
 
@@ -99,6 +88,9 @@ void CheckAssets(const fs::path& assetRoot, const ContentLibrary& library) {
         CheckClip(assetRoot, character.walkAsset, character.walkClip, what + " walk");
         CheckClip(assetRoot, character.hurtAsset, character.hurtClip, what + " knockback");
         CheckClip(assetRoot, character.deathAsset, character.deathClip, what + " fall");
+        if (!character.dormantAsset.empty()) {
+            CheckClip(assetRoot, character.dormantAsset, character.dormantClip, what + " dormant");
+        }
         Check(character.maxHitPoints > 0.0f, what + ": max_hit_points must be positive");
     }
     for (const auto& [id, level] : library.levels) {
@@ -136,6 +128,5 @@ int main() {
     } catch (const std::exception& error) {
         Fail(std::string("LoadContent threw: ") + error.what());
     }
-    std::printf(failures == 0 ? "content check passed\n" : "content check FAILED (%d)\n", failures);
-    return failures == 0 ? 0 : 1;
+    return testutil::Finish("content check");
 }

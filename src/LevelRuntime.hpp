@@ -6,7 +6,7 @@
 #include "Content.hpp"
 #include "LevelDefinition.hpp"
 #include "SessionState.hpp"
-#include "SkeletonAI.hpp"
+#include "EnemyAI.hpp"
 #include "engine/Engine.hpp"
 
 #include <optional>
@@ -29,9 +29,13 @@ inline constexpr float diagonalWallConstant = 222.1421f;
 
 struct EnemyInstance {
     explicit EnemyInstance(const CharacterDefinition& def, engine::Vec2 position, int facing)
-        : character(SpawnCharacter(def, position, facing)) {}
+        : character(SpawnCharacter(def, position, facing)),
+          aiRuntime(def.ai != nullptr ? MakeEnemyAIRuntime(*def.ai) : EnemyAIRuntime{}) {
+        // Show the dormant pose from the very first drawn frame.
+        character.dormant = (aiRuntime.mode == AIMode::Dormant);
+    }
     Character character;
-    SkeletonAIRuntime aiRuntime;
+    EnemyAIRuntime aiRuntime;
 };
 
 // ZoneData + the mutable state ZoneRuntime tracks at runtime: whether an
@@ -101,7 +105,7 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
                                 engine::Engine& app);
 
 // Per-frame update: player/enemy AI+control feed-in is the caller's job
-// (PlayerControl/SkeletonAI, called before this); this advances every
+// (PlayerControl/EnemyAI, called before this); this advances every
 // character, resolves zone activation/wave-clear/gate/door state, resolves
 // combat hits, and returns a destination if the player has crossed a level
 // exit this frame (a zone's opened door, or an open level-edge boundary) --

@@ -41,6 +41,8 @@ void GrantIframes(Character& character) {
 // -> damage -> forced facing -> knockback compute -> death check -> stun ->
 // hit-stop -> knockback/stunned dispatch -> iframes).
 void ApplyDamage(Character& attacker, Character& defender, const ActionDefinition& action, CombatWorld& world) {
+    defender.wasHit = true; // hit_last_frame is set before the block check in the source
+
     const bool fromLeft = attacker.position.x < defender.position.x;
 
     const bool isBlocking = defender.state == CombatState::Block;

@@ -23,7 +23,7 @@ add_executable(dungeons-of-dethnor
     src/Character.cpp
     src/CombatSystem.cpp
     src/Content.cpp
-    src/SkeletonAI.cpp
+    src/EnemyAI.cpp
     src/PlayerControl.cpp
     src/LevelRuntime.cpp
     src/LevelCamera.cpp
@@ -62,8 +62,24 @@ add_executable(dethnor-content-check
     src/Content.cpp
 )
 target_link_libraries(dethnor-content-check PRIVATE bengine nlohmann_json)
-target_include_directories(dethnor-content-check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(dethnor-content-check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 target_compile_definitions(dethnor-content-check PRIVATE
     DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )
 add_test(NAME content-check COMMAND dethnor-content-check)
+
+# Headless gameplay simulation: real Characters, AI and combat driven at a
+# fixed step against the real loaded data (no window, no textures).
+add_executable(dethnor-ai-sim
+    tests/ai_sim.cpp
+    src/Content.cpp
+    src/Character.cpp
+    src/CombatSystem.cpp
+    src/EnemyAI.cpp
+)
+target_link_libraries(dethnor-ai-sim PRIVATE bengine nlohmann_json)
+target_include_directories(dethnor-ai-sim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+target_compile_definitions(dethnor-ai-sim PRIVATE
+    DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+add_test(NAME ai-sim COMMAND dethnor-ai-sim)

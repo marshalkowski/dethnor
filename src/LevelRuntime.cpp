@@ -260,7 +260,7 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
         for (EnemyInstance& enemy : zone.enemies) {
             const CharacterDefinition& enemyDefinition = *enemy.character.definition;
             if (enemyDefinition.ai != nullptr) {
-                UpdateSkeletonAI(enemy.character, level.player, enemy.aiRuntime, *enemyDefinition.ai, dt);
+                UpdateEnemyAI(enemy.character, level.player, enemy.aiRuntime, *enemyDefinition.ai, dt);
             }
             const MovementBounds enemyBounds = ComputeMovementBounds(
                 level, enemy.character.position, enemyDefinition.collisionHalfWidth,

@@ -8,7 +8,7 @@
 #include "LevelRuntime.hpp"
 #include "PlayerControl.hpp"
 #include "SessionState.hpp"
-#include "SkeletonAI.hpp"
+#include "EnemyAI.hpp"
 #include "TitleScreen.hpp"
 
 #include <optional>

@@ -9,6 +9,8 @@
   "animations": {
     // mimic_frames.tres: "idle" 7 frames speed=5. No "walk" -- an immobile character never enters Walk.
     "idle":      { "texture": "sprites/characters/mimic/MBEU_mimic-Idle.png", "first_frame": 0, "frame_count": 7, "fps": 5.0 },
+    // "dormant": the closed-chest pose shown while the AI is Dormant (Idle.gd plays it in that case).
+    "dormant":   { "texture": "sprites/characters/mimic/MBEU_mimic-Dormant.png", "first_frame": 0, "frame_count": 1, "fps": 1.0 },
     // mimic_frames.tres has NO "knockback" animation (Stunned/Knockback call play("knockback"), which fails
     // and leaves the sprite on whatever it was already showing). A single held idle frame is the closest
     // stand-in that doesn't invent art.
@@ -20,5 +22,6 @@
   "actions": [
     { "command": "light", "action": "mimic_grab" },
     { "command": "heavy", "action": "mimic_attack" }
-  ]
+  ],
+  "ai_config": "mimic"
 }

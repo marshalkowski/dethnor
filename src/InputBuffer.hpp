@@ -11,7 +11,7 @@ namespace dethnor {
 // attack still finishing) can still pick up a command issued a few frames
 // ago, rather than requiring pixel-perfect input timing. Used identically
 // for player input and AI-issued commands -- see PlayerControl.cpp and
-// SkeletonAI.cpp, both of which only ever call BufferInput; nothing about
+// EnemyAI.cpp, both of which only ever call BufferInput; nothing about
 // this type knows or cares which one is calling it.
 class InputBuffer {
 public:

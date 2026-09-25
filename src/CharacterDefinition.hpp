@@ -73,10 +73,15 @@ struct CharacterDefinition {
     engine::AnimationClip hurtClip;  // "knockback" pose, shared by Knockback+Stunned
     engine::AnimationClip deathClip; // "fall"
 
+    // Optional "dormant" pose (a single held frame) for an enemy whose AI
+    // starts Dormant; empty asset means the character has none.
+    engine::AnimationClip dormantClip{};
+
     std::string idleAsset;
     std::string walkAsset;
     std::string hurtAsset;
     std::string deathAsset;
+    std::string dormantAsset;
 
     // base_controller.gd's get_action(): iterated in this exact order, first
     // buffered command that matches wins -- order is real tie-break priority

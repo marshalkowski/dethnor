@@ -1,7 +1,15 @@
-// data/ai_configs/basic_ai.tres and its Patrol/Chase/Engage state graph.
+// data/ai_configs/basic_ai.tres and its Patrol/Chase/Engage state graph (Skeleton and Zombie both use it).
 {
-  "detect_range": 150.0,       // InRangeCondition(150): Patrol -> Chase
-  "attack_enter_range": 50.0,  // InRangeCondition(50):  Chase  -> Engage
-  "attack_exit_range": 25.0,   // NOT InRange(25):       Engage -> Chase (the tighter exit threshold)
-  "attack_cooldown": 1.0       // AIConfig default, not overridden
+  "start_mode": "active",
+  "detect_range": 150.0,      // InRangeCondition(150): Patrol -> Chase; beyond it the enemy does nothing
+  "approach": true,           // the Chase state
+  "attacks": [
+    {
+      "command": "light",     // Engage.gd issues LIGHT
+      "range": 50.0,          // InRangeCondition(50): Chase  -> Engage
+      "exit_range": 25.0,     // NOT InRange(25):      Engage -> Chase (the tighter exit threshold)
+      "cooldown": 1.0,        // AIConfig.attack_cooldown default, not overridden
+      "face_target": true     // Engage turns to face the target as it swings
+    }
+  ]
 }

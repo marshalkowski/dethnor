@@ -4,7 +4,7 @@
 
 namespace dethnor {
 
-// Reads keyboard input and feeds player exactly the way SkeletonAI feeds the
+// Reads keyboard input and feeds player exactly the way EnemyAI feeds the
 // Skeleton: pendingMovement + inputBuffer.BufferInput are the only channels
 // touched, nothing here reaches into Character's combat-state internals
 // directly. Movement uses Godot's real (unremapped in project.godot)

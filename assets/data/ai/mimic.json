@@ -1,0 +1,20 @@
+// data/ai_configs/mimic_ai.tres: Dormant -> Awaken (on hit) -> HoldAction / MimicBite / MimicGrab.
+//
+// The five-state graph reduces to a mode plus two scored attacks:
+//  - Dormant mode until the first hit.
+//  - Awaken -> HoldAction on AnimationFinished never fires in Godot (nothing ever sets that flag), so the
+//    "wake animation delay" doesn't exist and Awaken is just normal combat: range checks and all.
+//  - MimicBite (HEAVY) while within 18, MimicGrab (LIGHT) while within 28, otherwise HoldAction (nothing).
+//    Both states emit their command every frame -- hence cooldown 0. Bite is listed with the higher weight
+//    so that where both reach (inside 18) it bites, as the source's transition order does.
+//  - No Chase state: the Mimic is immobile.
+//  - TargetDead -> HoldAction is handled generically (a dead target is no target).
+//  - detect_range = 0.0 in the .tres (and is never read); no gate here.
+{
+  "start_mode": "dormant",
+  "approach": false,
+  "attacks": [
+    { "command": "heavy", "range": 18.0, "weight": 2.0 },   // MimicBite   -> mimic_attack
+    { "command": "light", "range": 28.0, "weight": 1.0 }    // MimicGrab   -> mimic_grab
+  ]
+}

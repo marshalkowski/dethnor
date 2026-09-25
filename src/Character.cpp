@@ -318,6 +318,7 @@ CharacterAssets LoadCharacterAssets(engine::Engine& app, const CharacterDefiniti
         .walkTexture = app.LoadTexture(def.walkAsset.c_str()),
         .hurtTexture = app.LoadTexture(def.hurtAsset.c_str()),
         .deathTexture = app.LoadTexture(def.deathAsset.c_str()),
+        .dormantTexture = app.LoadTexture((def.dormantAsset.empty() ? def.idleAsset : def.dormantAsset).c_str()),
         .actionTextures = std::move(actionTextures),
     };
 }
@@ -345,6 +346,13 @@ void DrawCharacter(engine::Engine& app, const Character& character, const Charac
         engine::Rect frame{};
         switch (character.state) {
         case CombatState::Idle:
+            if (character.dormant && !character.definition->dormantAsset.empty()) {
+                const engine::AnimationClip& clip = character.definition->dormantClip;
+                texture = assets.dormantTexture;
+                frame = engine::Rect{static_cast<float>(clip.firstFrame) * clip.frameWidth, 0.0f, clip.frameWidth,
+                                      clip.frameHeight};
+                break;
+            }
             texture = assets.idleTexture;
             frame = character.idleAnimation.CurrentFrameRect();
             break;
