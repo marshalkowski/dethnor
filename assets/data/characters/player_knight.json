@@ -1,0 +1,21 @@
+// data/character_configs/players/player_knight.tres. The Knight's own resource only overrides name/frames/
+// actions, so every numeric field is a CharacterConfig default (omitted here, as in the .tres).
+{
+  "sprite_frame_size": [128, 64],
+  "animations": {
+    // knight_frames.tres: "idle"/"walk" 6 frames, speed=5.0
+    "idle":      { "texture": "sprites/characters/knight/MBEU_character_knight-Idle-6.png", "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "walk":      { "texture": "sprites/characters/knight/MBEU_character_knight-Walk.png",   "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    // "knockback" (Hit.png): 1 frame at column 1, a static held pose
+    "knockback": { "texture": "sprites/characters/knight/MBEU_character_knight-Hit.png",    "first_frame": 1, "frame_count": 1, "fps": 1.0 },
+    // "fall" (Fall.png): 4 frames at columns 1-4, speed=10
+    "fall":      { "texture": "sprites/characters/knight/MBEU_character_knight-Fall.png",   "first_frame": 1, "frame_count": 4, "fps": 10.0 }
+  },
+  // Order is real tie-break priority: the first buffered command that matches wins.
+  "actions": [
+    { "command": "light_forward", "action": "knight_quick_stab" },
+    { "command": "light",         "action": "knight_sword_slash_1" },
+    { "command": "heavy",         "action": "knight_sword_overhead" },
+    { "command": "block",         "action": "knight_basic_block" }
+  ]
+}

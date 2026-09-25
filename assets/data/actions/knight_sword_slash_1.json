@@ -1,0 +1,14 @@
+// data/attacks/sword_slash_1.tres (AttackData). "slash_1_smear" clip: LSlash-1-smear.png, 4 frames at
+// columns 1-4. The .tres chains into sword_slash_2 on a further Light press; not ported (M5 moveset work).
+{
+  "kind": "attack",
+  "texture": "sprites/characters/knight/MBEU_character_knight-LSlash-1-smear.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4],
+  "active_frames": [1, 2],
+  "damage": 5,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [33, -22.5],
+  "hitbox_size": [15, 45]
+}

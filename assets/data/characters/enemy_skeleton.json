@@ -1,0 +1,19 @@
+// data/character_configs/enemies/enemy_skeleton.tres. Overrides only name/frames/actions/max_hit_points/
+// iframes_on_hit_sec/ai_config; everything else is a CharacterConfig default.
+{
+  "max_hit_points": 30,
+  "iframes_on_hit_sec": 0.0,  // no post-hit invulnerability at all
+  "sprite_frame_size": [128, 64],
+  "animations": {
+    // skeleton_frames.tres: "idle"/"walk" 6 frames, speed=5.0 (identical to the Knight's)
+    "idle":      { "texture": "sprites/characters/skeleton/MBEU_character_skeleton-Idle-6.png", "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "walk":      { "texture": "sprites/characters/skeleton/MBEU_character_skeleton-Walk.png",   "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "knockback": { "texture": "sprites/characters/skeleton/MBEU_character_skeleton-Hit.png",    "first_frame": 1, "frame_count": 1, "fps": 1.0 },
+    // "fall": 8 frames at columns 1-8, speed=10 (longer than the Knight's)
+    "fall":      { "texture": "sprites/characters/skeleton/MBEU_character_skeleton-Fall.png",   "first_frame": 1, "frame_count": 8, "fps": 10.0 }
+  },
+  "actions": [
+    { "command": "light", "action": "skeleton_sword_slash_1" }
+  ],
+  "ai_config": "basic"
+}

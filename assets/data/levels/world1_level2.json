@@ -1,0 +1,16 @@
+// data/levels/world1_level2.tres (Resource_d0wef) -- interim minimal version, matching M3: real geometry,
+// spawn points and left_destination, but no wave and no door yet (both added in M4 step 5).
+{
+  "bg_set": "world_1",
+  "left_destination": { "world": 1, "level": 1, "spawn_id": "ps1" },  // back into level 1's zone 1
+  "zones": [
+    {
+      "size": 2,
+      "has_right_wall": true,
+      "player_spawn_points": [
+        { "id": "ps0", "position": [32, 151] },
+        { "id": "ps1", "position": [399, 99], "face_left": true }
+      ]
+    }
+  ]
+}

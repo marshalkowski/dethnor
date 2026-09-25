@@ -1,0 +1,14 @@
+// data/attacks/quick_stab.tres (AttackData). "strike" clip: Strike-Fwd.png, 4 frames at columns 1-4.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/knight/MBEU_character_knight-Strike-Fwd.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4],
+  "frame_rate": 0.04,
+  "active_frames": [1, 2, 3],
+  "damage": 5,
+  "knockback_force": 30.0,
+  "stun_time": 0.0,
+  "hitbox_position": [30, -24],
+  "hitbox_size": [22, 14]
+}

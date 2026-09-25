@@ -1,0 +1,16 @@
+// enemy_skeleton.tres binds command=LIGHT to the Knight's own sword_slash_1.tres (same damage/knockback/
+// stun/hitbox), but that resource's animation_name ("slash_1_smear") doesn't exist on the Skeleton's sprite
+// sheet -- skeleton_frames.tres has a plain "slash_1" (LSlash-1.png, 5 frames at columns 1-5) instead.
+// Confirmed content bug in the source; fixed here by pointing at the Skeleton's real clip (approved in M2).
+{
+  "kind": "attack",
+  "texture": "sprites/characters/skeleton/MBEU_character_skeleton-LSlash-1.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4, 5],
+  "active_frames": [1, 2],
+  "damage": 5,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [33, -22.5],
+  "hitbox_size": [15, 45]
+}

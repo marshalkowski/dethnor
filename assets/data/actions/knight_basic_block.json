@@ -1,0 +1,10 @@
+// data/blocks/basic_block.tres (BlockData). "block" clip: Block.png, 5 frames at columns 1-5. No hitbox
+// window (active_frames is empty in the .tres); the real block check is a facing check with no frame gating.
+{
+  "kind": "block",
+  "texture": "sprites/characters/knight/MBEU_character_knight-Block.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4, 5],
+  "sustainable": true,
+  "sustain_stamina_cost_per_sec": 5.0
+}

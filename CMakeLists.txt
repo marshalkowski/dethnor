@@ -52,3 +52,20 @@ add_custom_command(TARGET dungeons-of-dethnor POST_BUILD
         "${CMAKE_CURRENT_SOURCE_DIR}/assets"
         "$<TARGET_FILE_DIR:dungeons-of-dethnor>/assets"
 )
+
+# Headless data check: loads every JSON file under assets/data through the
+# same LoadContent the game uses and verifies it against the asset files on
+# disk. No window or GPU needed -- run with `ctest -C Debug` from the build
+# directory.
+enable_testing()
+add_executable(dethnor-content-check
+    tests/content_check.cpp
+    src/Content.cpp
+    src/LevelDefinition.cpp
+)
+target_link_libraries(dethnor-content-check PRIVATE bengine nlohmann_json)
+target_include_directories(dethnor-content-check PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+target_compile_definitions(dethnor-content-check PRIVATE
+    DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+add_test(NAME content-check COMMAND dethnor-content-check)
