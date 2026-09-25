@@ -1,0 +1,13 @@
+// data/attacks/zombie_strike.tres (AttackData). "strike" clip: zombie Strike-Fwd.png, 7 frames at columns 1-7
+// of 64px-wide frames. Tiny hitbox on purpose (10x8 at +13): the Zombie has to be right on top of its target.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/zombie/MBEU_zombie-Strike-Fwd.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4, 5, 6, 7],
+  "active_frames": [4, 5],
+  "damage": 20,
+  "knockback_force": 30.0,
+  "hitbox_position": [13, -25],
+  "hitbox_size": [10, 8]
+}

@@ -1,0 +1,21 @@
+// data/character_configs/enemies/enemy_zombie.tres. Overrides name/frames/speed/actions/max_hit_points/
+// iframes_on_hit_sec/ai_config; everything else is a CharacterConfig default. Shares the Skeleton's
+// basic_ai.tres. speed = 6 (not the default 40) is what the .tres says: a very slow shambler.
+{
+  "speed": 6,
+  "max_hit_points": 30,
+  "iframes_on_hit_sec": 0.0,
+  "sprite_frame_size": [64, 64],
+  "animations": {
+    // zombie_frames.tres: "idle" 6 frames speed=5; "walk" 6 frames speed=6
+    "idle":      { "texture": "sprites/characters/zombie/MBEU_zombie-Idle-6.png", "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "walk":      { "texture": "sprites/characters/zombie/MBEU_zombie-Walk.png",   "first_frame": 0, "frame_count": 6, "fps": 6.0 },
+    "knockback": { "texture": "sprites/characters/zombie/MBEU_zombie-Hit.png",    "first_frame": 1, "frame_count": 1, "fps": 1.0 },
+    // "fall": 5 frames at columns 0-4, speed=10
+    "fall":      { "texture": "sprites/characters/zombie/MBEU_zombie-Fall.png",   "first_frame": 0, "frame_count": 5, "fps": 10.0 }
+  },
+  "actions": [
+    { "command": "light", "action": "zombie_strike" }
+  ],
+  "ai_config": "basic"
+}

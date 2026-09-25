@@ -1,0 +1,24 @@
+// data/character_configs/enemies/enemy_mimic.tres. Overrides name/frames/speed/immobile/actions/
+// max_hit_points/iframes_on_hit_sec/ai_config; everything else is a CharacterConfig default.
+{
+  "speed": 0,
+  "immobile": true,
+  "max_hit_points": 50,
+  "iframes_on_hit_sec": 0.0,
+  "sprite_frame_size": [64, 64],
+  "animations": {
+    // mimic_frames.tres: "idle" 7 frames speed=5. No "walk" -- an immobile character never enters Walk.
+    "idle":      { "texture": "sprites/characters/mimic/MBEU_mimic-Idle.png", "first_frame": 0, "frame_count": 7, "fps": 5.0 },
+    // mimic_frames.tres has NO "knockback" animation (Stunned/Knockback call play("knockback"), which fails
+    // and leaves the sprite on whatever it was already showing). A single held idle frame is the closest
+    // stand-in that doesn't invent art.
+    "knockback": { "texture": "sprites/characters/mimic/MBEU_mimic-Idle.png", "first_frame": 0, "frame_count": 1, "fps": 1.0 },
+    // "fall": 4 frames at columns 1-4, speed=5
+    "fall":      { "texture": "sprites/characters/mimic/MBEU_mimic-Fall.png", "first_frame": 1, "frame_count": 4, "fps": 5.0 }
+  },
+  // command=LIGHT -> mimic_grab, command=HEAVY -> mimic_attack (the bite).
+  "actions": [
+    { "command": "light", "action": "mimic_grab" },
+    { "command": "heavy", "action": "mimic_attack" }
+  ]
+}

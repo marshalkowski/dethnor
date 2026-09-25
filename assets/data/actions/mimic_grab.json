@@ -1,0 +1,13 @@
+// data/attacks/mimic_grab.tres (AttackData) -- bound to command=LIGHT. Deals no damage; its negative
+// knockback_force pulls the target TOWARD the Mimic (into bite range). "grab" clip: MBEU_mimic-Grab.png,
+// 10 frames at columns 1-10 of 64px-wide frames.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/mimic/MBEU_mimic-Grab.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "active_frames": [5, 6, 7],
+  "knockback_force": -100.0,
+  "hitbox_position": [20, -25],
+  "hitbox_size": [16, 16]
+}

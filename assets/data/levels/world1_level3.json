@@ -1,0 +1,23 @@
+// data/levels/world1_level3.tres (Resource_eyv8l).
+//
+// NOT PORTED YET: this zone's one wave is a single Executioner boss (boss_executioner.tres, boss_title =
+// "executioner"). The Executioner -- its chop/spin-slash chains, tall hurtbox, boss-title banner and AI --
+// is M5 step 4, so this zone currently has no waves and is a purely explorable room. Everything else is
+// the real data: geometry, spawn point, trigger/spawn rects (kept for when the boss lands) and the
+// left_destination back into level 2.
+//
+// The .tres also carries door_destination = world1/level3/ps0 (pointing at itself) but leaves has_door
+// unset, so no door exists here. That stray destination is dead data and deliberately not copied.
+{
+  "bg_set": "world_1",
+  "left_destination": { "world": 1, "level": 2, "spawn_id": "ps1" },
+  "zones": [
+    {
+      "size": 2,
+      "has_right_wall": true,
+      "trigger_rects": [ [85, 154, 32, 138] ],
+      "spawn_rects": [ [210, 153, 200, 130] ],
+      "player_spawn_points": [ { "id": "ps0", "position": [32, 151] } ]
+    }
+  ]
+}

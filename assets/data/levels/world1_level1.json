@@ -1,7 +1,6 @@
 // data/levels/world1_level1.tres. Neither left_destination nor right_destination is set, so both level
 // edges are solid walls; the only way out is zone 1's own door. Props (torches) are not ported.
-// NOTE: the real waves spawn Zombies; the Zombie isn't ported yet, so they are substituted 1-for-1 with
-// Skeletons, same counts (replaced with the real enemy in M4 step 5).
+// Both waves are Zombies: 1 in zone 0, 2 in zone 1.
 {
   "bg_set": "world_1",
   "zones": [
@@ -10,7 +9,7 @@
       "size": 2,
       "has_left_wall": true,
       "enemy_waves": [
-        { "enemy_spawn_data": [ { "enemy_config": "enemy_skeleton", "enemy_count": 1 } ] }
+        { "enemy_spawn_data": [ { "enemy_config": "enemy_zombie", "enemy_count": 1 } ] }
       ],
       "trigger_rects": [ [189, 155, 32, 138], [571, 154, 32, 138] ],
       "spawn_rects": [ [377, 155, 256, 138] ],
@@ -22,7 +21,7 @@
       "door_destination": { "world": 1, "level": 2, "spawn_id": "ps0" },
       "has_right_wall": true,
       "enemy_waves": [
-        { "enemy_spawn_data": [ { "enemy_config": "enemy_skeleton", "enemy_count": 2 } ] }
+        { "enemy_spawn_data": [ { "enemy_config": "enemy_zombie", "enemy_count": 2 } ] }
       ],
       "trigger_rects": [ [32, 154, 32, 138] ],
       "spawn_rects": [ [189, 170, 187, 87] ],

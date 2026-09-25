@@ -1,12 +1,26 @@
-// data/levels/world1_level2.tres (Resource_d0wef) -- interim minimal version, matching M3: real geometry,
-// spawn points and left_destination, but no wave and no door yet (both added in M4 step 5).
+// data/levels/world1_level2.tres (Resource_d0wef): one MEDIUM zone with a right wall, a door to level 3,
+// and a single wave of 4 Skeletons + 1 Mimic. left_destination leads back into level 1's zone 1. Props
+// (torches) are not ported.
 {
   "bg_set": "world_1",
-  "left_destination": { "world": 1, "level": 1, "spawn_id": "ps1" },  // back into level 1's zone 1
+  "left_destination": { "world": 1, "level": 1, "spawn_id": "ps1" },
   "zones": [
     {
       "size": 2,
+      "has_door": true,
+      "door_destination": { "world": 1, "level": 3, "spawn_id": "ps0" },
       "has_right_wall": true,
+      "enemy_waves": [
+        {
+          // One wave, two spawn groups (they appear together; the zone clears when all five are dead).
+          "enemy_spawn_data": [
+            { "enemy_config": "enemy_skeleton", "enemy_count": 4 },
+            { "enemy_config": "enemy_mimic" }
+          ]
+        }
+      ],
+      "trigger_rects": [ [85, 154, 32, 138] ],
+      "spawn_rects": [ [210, 153, 200, 130] ],
       "player_spawn_points": [
         { "id": "ps0", "position": [32, 151] },
         { "id": "ps1", "position": [399, 99], "face_left": true }
