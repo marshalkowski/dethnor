@@ -11,6 +11,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(vendor/Bengine)
 
+# nlohmann/json 3.12.0, vendored as a single header (vendor/nlohmann_json).
+# Header-only, so an INTERFACE target that just carries the include path.
+add_library(nlohmann_json INTERFACE)
+target_include_directories(nlohmann_json INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor/nlohmann_json
+)
+
 add_executable(dungeons-of-dethnor
     src/main.cpp
     src/Character.cpp
@@ -27,6 +34,7 @@ add_executable(dungeons-of-dethnor
 target_link_libraries(dungeons-of-dethnor
     PRIVATE
         bengine
+        nlohmann_json
 )
 
 target_include_directories(dungeons-of-dethnor
