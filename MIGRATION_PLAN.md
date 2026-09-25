@@ -5,7 +5,7 @@ Audit date: 2026-09-19
 Source Godot project (read-only reference): `C:/Users/marsh/OneDrive/Documents/dungeons-of-dethnor`
 Target C++ project (this repo): `C:/Users/marsh/game_projects/dethnor`, engine vendored at `vendor/Bengine`
 
-**Status (2026-09-24): M0–M3 are done; M4 and M5 remain.** §1–§4 are the original audit (2026-09-19) and are kept as written; §5 tracks milestone status.
+**Status (2026-09-24): M0–M3 are done; M4 is implemented and automatically tested but not yet playtested; M5 remains.** §1–§4 are the original audit (2026-09-19) and are kept as written; §5 tracks milestone status.
 
 ## 1. Architectural overview — the Godot game
 
@@ -76,7 +76,7 @@ Everything else absent (tweening, particles, gamepad, fonts, fixed timestep, log
 
 ## 5. Proposed migration plan
 
-Six milestones, each a vertical slice that builds and runs, increasing in scope. M0–M3 are done; M4 and M5 remain.
+Six milestones, each a vertical slice that builds and runs, increasing in scope. M0–M3 are done; M4 is implemented (pending a playtest); M5 remains.
 
 - **M0 — Engine bring-up** — ✅ DONE (`2c27bc4`, "Initialize engine"): Bengine window/loop wired into Dethnor's `main.cpp`, a scene-state skeleton (`enum AppState` + `std::optional`, matching Bengine's own idiom) with one placeholder scene, one real sprite asset drawn. *Run test*: window opens showing a static character sprite, closes cleanly.
 - **M1 — Movement + camera + one static room** — ✅ DONE (`0804a7b`): `Character` struct, 8-direction movement with idle/walk animation switching, a hand-rolled camera (X-follow, clamped, smooth-damped — ported directly from `LevelCamera`'s math), one hardcoded test room (zone 0 of `world1_level1`, real geometry). Also moved asset loading onto Bengine E1's asset-root workflow. *Run test*: walk the player around a bounded room, camera follows correctly.
@@ -88,14 +88,22 @@ Six milestones, each a vertical slice that builds and runs, increasing in scope.
 - **`world1_level2` is a minimal destination.** It keeps the real zone geometry, spawn points, and the real left-destination back into level 1, but omits the real wave (4 Skeletons + 1 Mimic) and the zone's door to `world1_level3`. It exists to prove cross-level transition, not to be a playable encounter. `world1_level3` is not ported.
 - **Only Knight is fully playable.** Rogue and Wizard appear on the class-select screen (idle icons only); selecting either shows "Not yet available" and does not start the game. No Rogue/Wizard movesets, spells, or MP use exist yet.
 
-- **M4 — Data-driven content pipeline** *(in progress)*: goal is to move hardcoded content into data files and finish the real `world1` content. Steps:
-  1. Vendor nlohmann/json as a single header under `vendor/`, exposed to the game via an INTERFACE include path in `CMakeLists.txt`; verify the build. *(Bengine itself is not modified.)*
-  2. Loaders for the action/character schemas (`ActionData`/`AttackData`/`BlockData`, `CharacterConfig`): define the JSON shape, write game-side loaders into the existing `ActionDefinition`/`CharacterDefinition` structs, and switch Knight and Skeleton from hardcoded C++ to loaded data.
-  3. Data-driven enemy AI, following `AI_ARCHITECTURE_PROPOSAL.md` (hybrid: a small mode FSM for one-way states such as dormant/awake/stunned/dead, plus utility scoring for moment-to-moment intent choice — **not** the Godot composable `AIStateResource`/condition graph). Load the intent × consideration table (curve type + weight per cell) from data using the fixed input-signal and curve vocabulary the proposal calls for; add intents (Defend/Retreat, per-attack scoring) only as the ported enemies need them.
-  4. Loaders for `LevelData`/`ZoneData`/`WaveData` replacing the hardcoded `LevelDefinition.cpp`, including spawn points, doors, and destinations.
-  5. Port the enemy types that `world1` actually spawns (Zombie to replace the Skeleton stand-in; Mimic for `world1_level2`'s wave — confirm the exact roster against the Godot `LevelData` when reached), re-authored by hand in the new format.
-  6. Fill in the real `world1_level2` zone (wave + door) and port `world1_level3`, with doors carrying `SessionState` (HP/stamina/MP, spawn point) across all three levels.
-  7. *Run test*: play all three `world1` levels end-to-end with real content and multiple enemy types.
+- **M4 — Data-driven content pipeline** — ✅ IMPLEMENTED, awaiting playtest (`0639b53`..`0ee50df` plus a final verification commit): all gameplay content now loads from JSON under `assets/data/`, and `world1` is ported end to end. Steps as executed:
+  1. Vendor nlohmann/json 3.12.0 as a single header under `vendor/nlohmann_json`, exposed through an INTERFACE include path. *(Bengine itself is not modified.)*
+  2. Game-side loaders (`Content.hpp/.cpp`, `LoadContent`) for `ActionData`/`AttackData`/`BlockData`, `CharacterConfig`, `AIConfig` and `LevelData`/`ZoneData`/`WaveData`. Field names follow the Godot resources; files may contain `//` comments; loading cross-validates ids and level destinations and reports errors with file names.
+  3. Hand-authored the JSON (no importer) for everything ported: 8 actions, 2 AI configs, 4 characters (Knight, Skeleton, Zombie, Mimic), 3 levels. (The plan's "~120 `.tres`" includes Rogue/Wizard/Executioner/spell/FX/projectile/pickup resources, which belong to M5 and were not transcribed.)
+  4. Deleted the hardcoded Knight/Skeleton/level definitions after a temporary check proved the JSON reproduced them field for field.
+  5. Ported the real `world1` content, roster confirmed against the Godot `LevelData`: level 1 = Zombies (1, then 2); level 2 = one wave of 4 Skeletons + 1 Mimic plus a door to level 3; level 3 = one **Executioner** boss.
+  6. Generalized the AI (`EnemyAI`): a mode enum `{Dormant, Active, Dead}` plus scored attack options (enter/exit reach, cooldown, per-enemy weight, face-target) loaded from `data/ai/*.json`. Skeleton and Zombie share `basic.json`; the Mimic is dormant until hit and picks bite (weight 2, reach 18) over grab (weight 1, reach 28) by data.
+  7. Door chain across all three levels (L1→L2 door, L2→L3 door, L3→L2 and L2→L1 via left edges), carrying HP, stamina, **MP** and spawn point through `SessionState` (`EnterDestination`).
+  8. Verification: everything builds in Debug and Release, and four ctest targets pass (`ctest -C Debug` from `build/`): `content-check` (loads all data, checks every sprite sheet exists and is wide enough for its frames — also run against the copy shipped beside the executable), `ai-sim` (headless Character/AI/combat simulation), `level-flow` (door/spawn/stat chain plus a scripted bot that plays all three levels to their exits). The game window itself could not be launched in the authoring session (no display), so **nothing has been seen or played**.
+
+  **M4 caveats (what "done" does not cover):**
+  - **Level 3 has no boss yet.** Its only wave in Godot is the Executioner (`boss_executioner.tres`, `boss_title = "executioner"`), which the plan schedules as M5 step 4. The zone is geometry, spawn point, trigger/spawn rects and the left exit back to level 2, with `"waves": []`; it is an explorable dead end. Its `.tres` also carries a self-pointing `door_destination` with `has_door` unset — dead data, not ported, so level 3 has no door.
+  - **Defend/Retreat intents were not added.** No ported enemy uses either; the AI structure (`AIIntent`, attack options) is where they would go. Godot's Mimic `Awaken` state has no mode of its own: its wait-for-animation transition reads a flag nothing ever sets, so the original never waits either. The Mimic has no "knockback" animation in Godot; a held idle frame stands in.
+  - **Zombie behavior is faithful, and odd.** `speed = 6` (default is 40) and a 10×8 hitbox 13 px in front, while the shared basic AI starts swinging at 50 px — expect a very slow Zombie that mostly whiffs. Check that this matches how the Godot build feels.
+  - **Still not ported:** props (torches), spawn-point `linked_to_door`, `WaveData.boss_title`, Knight's slash chain (`sword_slash_2`+), random enemy spawn placement (deterministic spread kept from M3), the fade on death.
+  - **Playtest checklist for Benjamin:** title → Knight → clear L1 (Zombie, then 2 Zombies) → door → L2 (4 Skeletons + Mimic: hit the chest to wake it, watch bite vs grab) → door → L3 → walk left back to L2 → left again back to L1. HP/stamina should persist across each hop; Zombie/Mimic sprites should be anchored on the floor at the right size.
 - **M5 — Parity polish**: remaining classes, effects, bosses, and the open decisions. Steps:
   1. Rogue: full moveset and animations; make it selectable on the title screen.
   2. Wizard: full moveset plus spells and MP consumption; make it selectable on the title screen.

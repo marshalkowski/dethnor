@@ -67,6 +67,10 @@ target_compile_definitions(dethnor-content-check PRIVATE
     DETHNOR_ASSET_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )
 add_test(NAME content-check COMMAND dethnor-content-check)
+# Same check against the assets/ copy beside the built game (needs the game
+# target built first) -- proves the post-build copy ships the data.
+add_test(NAME content-check-built
+    COMMAND dethnor-content-check "$<TARGET_FILE_DIR:dungeons-of-dethnor>/assets")
 
 # Headless gameplay simulation: real Characters, AI and combat driven at a
 # fixed step against the real loaded data (no window, no textures).

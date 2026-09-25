@@ -117,8 +117,11 @@ void CheckLevels(const ContentLibrary& library) {
 
 } // namespace
 
-int main() {
-    const fs::path assetRoot = DETHNOR_ASSET_ROOT;
+// Usage: dethnor-content-check [asset-root]. Defaults to the source tree's
+// assets/; the "built" ctest passes the copy the post-build step puts next to
+// the game executable, which is what the game actually loads at runtime.
+int main(int argc, char** argv) {
+    const fs::path assetRoot = (argc > 1) ? fs::path(argv[1]) : fs::path(DETHNOR_ASSET_ROOT);
     try {
         const ContentLibrary library = LoadContent(assetRoot / "data");
         std::printf("loaded %zu actions, %zu ai configs, %zu characters, %zu levels\n", library.actions.size(),
