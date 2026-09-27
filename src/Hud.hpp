@@ -5,6 +5,7 @@
 #include "engine/Engine.hpp"
 
 #include <array>
+#include <string>
 
 namespace dethnor {
 
@@ -20,6 +21,11 @@ struct HudAssets {
     engine::TextureHandle unitHp;
     engine::TextureHandle unitStamina; // level_ui's stamina meter reuses the (oddly named) "unit_block" icon
     engine::TextureHandle unitMp;
+
+    // boss_title_frames.tres's one real clip ("executioner_in") -- the only
+    // boss ported so far, so this is a single texture rather than a lookup;
+    // see DrawBossTitleBanner.
+    engine::TextureHandle executionerBossTitle;
 };
 
 HudAssets LoadHudAssets(engine::Engine& app);
@@ -39,5 +45,13 @@ HudAssets LoadHudAssets(engine::Engine& app);
 // screen-locked. Call this OUTSIDE the world's own BeginCameraMode/
 // EndCameraMode block -- it manages its own.
 void DrawHud(engine::Engine& app, const Character& player, PlayerClass playerClass, const HudAssets& assets);
+
+// level_ui.gd's show_boss_title(): centered on screen (native (199, 112),
+// the BossTitle node's own authored position -- dead center of 398x224).
+// `elapsed` is BossTitleBanner::elapsed (see LevelRuntime.hpp) -- only
+// `title` == "executioner" actually draws anything, since it's the only
+// boss ported so far. Same screen-space/fixed-camera convention as DrawHud;
+// call outside the world's own BeginCameraMode/EndCameraMode block.
+void DrawBossTitleBanner(engine::Engine& app, const std::string& title, float elapsed, const HudAssets& assets);
 
 } // namespace dethnor

@@ -1,0 +1,17 @@
+// data/attacks/executioner_spin_slash.tres (AttackData). "spin_slash" clip: Spin-Slash.png,
+// 256x128/frame, columns 1-8. Bound directly to Light. Chains unconditionally into a two-part
+// recovery: spin_slash_recover_1 -> spin_slash_recover_2.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/bosses/executioner/MBEU_executioner-Spin-Slash.png",
+  "frame_size": [256, 128],
+  "frames": [1, 2, 3, 4, 5, 6, 7, 8],
+  "active_frames": [5, 6, 7],
+  "damage": 10,
+  "knockback_force": 100.0,
+  "stun_time": 1.0,
+  "hit_freeze_attacker": false,
+  "hitbox_position": [0, -36],
+  "hitbox_size": [76, 8],
+  "chains": { "none": "executioner_spin_slash_recover_1" }
+}

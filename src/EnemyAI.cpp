@@ -1,5 +1,6 @@
 #include "EnemyAI.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace dethnor {
@@ -132,7 +133,14 @@ void UpdateEnemyAI(Character& enemy, const Character& target, EnemyAIRuntime& ai
                 enemy.facing = (target.position.x < enemy.position.x) ? -1 : 1;
             }
             enemy.inputBuffer.BufferInput(option.command);
-            ai.cooldownTimers[static_cast<std::size_t>(bestReady)] = option.cooldown;
+            if (def.sharedCooldown) {
+                // ExecutionerEngage.gd: one cooldown_timer for every option,
+                // so firing either one gates both -- kept in sync by setting
+                // every entry, not just the fired option's own.
+                std::fill(ai.cooldownTimers.begin(), ai.cooldownTimers.end(), option.cooldown);
+            } else {
+                ai.cooldownTimers[static_cast<std::size_t>(bestReady)] = option.cooldown;
+            }
             trace.issuedAttack = bestReady;
         }
     } else if (def.approach) {

@@ -174,6 +174,10 @@ int main() {
             dethnor::DrawLevelRuntime(app, g.level, characterAssets, effectAssets);
             app.EndCameraMode();
             dethnor::DrawHud(app, g.level.player, session.playerClass, hudAssets);
+            if (g.level.bossTitleBanner.has_value()) {
+                dethnor::DrawBossTitleBanner(app, g.level.bossTitleBanner->title, g.level.bossTitleBanner->elapsed,
+                                            hudAssets);
+            }
             break;
         }
         }

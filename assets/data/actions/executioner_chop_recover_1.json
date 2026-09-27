@@ -1,0 +1,13 @@
+// data/attacks/executioner_chop_recover_1.tres (AttackData). "chop_reset_try" clip: LiftAttempt.png,
+// 256x128/frame, the same 4-column cycle repeated 3 times. Reached only via executioner_chop's
+// unconditional chain; chains unconditionally into executioner_chop_recover_2.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/bosses/executioner/MBEU_executioner-LiftAttempt.png",
+  "frame_size": [256, 128],
+  "frames": [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+  "frame_rate": 0.2,
+  "hit_freeze_attacker": false,
+  "hit_freeze_target": false,
+  "chains": { "none": "executioner_chop_recover_2" }
+}

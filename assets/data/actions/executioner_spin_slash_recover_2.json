@@ -1,0 +1,11 @@
+// data/attacks/executioner_spin_slash_recover_2.tres (AttackData). "spin_slash_reset" clip:
+// Spin-SlashReset.png, 256x128/frame, columns 0-3. Reached only via executioner_spin_slash_recover_1's
+// unconditional chain -- the recovery's terminal pose, no further chain.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/bosses/executioner/MBEU_executioner-Spin-SlashReset.png",
+  "frame_size": [256, 128],
+  "frames": [0, 1, 2, 3],
+  "hit_freeze_attacker": false,
+  "hit_freeze_target": false
+}

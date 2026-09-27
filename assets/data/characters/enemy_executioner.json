@@ -1,0 +1,25 @@
+// data/character_configs/bosses/boss_executioner.tres. Overrides speed/collision/hurtbox/frames/actions/
+// max_hit_points/ai_config. iframes_on_hit_sec is NOT overridden here (unlike every other migrated
+// enemy, which sets it to 0) -- the Executioner keeps the CharacterConfig default of 0.6s, a
+// deliberate difference: this boss gets real post-hit invulnerability, same as the player classes.
+{
+  "speed": 20,
+  "collision_box_size": [36, 8],
+  "hurtbox_size": [32, 60],
+  "hurtbox_offset": [0, -36],
+  "max_hit_points": 200,
+  "sprite_frame_size": [256, 128],
+  "animations": {
+    // executioner_frames.tres: "idle"/"walk" 6 frames, speed=5.0
+    "idle":      { "texture": "sprites/characters/bosses/executioner/MBEU_executioner-Idle-6.png", "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "walk":      { "texture": "sprites/characters/bosses/executioner/MBEU_executioner-Walk.png",   "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "knockback": { "texture": "sprites/characters/bosses/executioner/MBEU_executioner-Hit.png",    "first_frame": 1, "frame_count": 1, "fps": 1.0 },
+    // "fall" (Fall.png): 10 frames at columns 1-10, speed=10
+    "fall":      { "texture": "sprites/characters/bosses/executioner/MBEU_executioner-Fall.png",   "first_frame": 1, "frame_count": 10, "fps": 10.0 }
+  },
+  "actions": [
+    { "command": "light", "action": "executioner_spin_slash" },
+    { "command": "heavy", "action": "executioner_chop" }
+  ],
+  "ai_config": "boss_executioner"
+}

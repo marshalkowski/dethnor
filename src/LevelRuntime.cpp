@@ -88,7 +88,7 @@ MovementBounds ComputeMovementBounds(const LevelRuntime& level, engine::Vec2 pos
 // than scattered through the rect. Cells are sampled at their centers, which
 // keeps the spread inside the rect instead of pinning the first and last row
 // to its edges.
-void SpawnWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
+std::string SpawnWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     const WaveDefinition& wave = zone.definition->waves[static_cast<std::size_t>(zone.currentWaveIndex)];
     const engine::Rect& spawnRect = zone.definition->spawnRect;
     const int totalCount = wave.TotalEnemyCount();
@@ -125,15 +125,16 @@ void SpawnWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 pl
             zone.enemies.back().character.facing = (playerPosition.x < worldPosition.x) ? -1 : 1;
         }
     }
+    return wave.bossTitle;
 }
 
-void ActivateZone(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
+std::optional<std::string> ActivateZone(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     if (zone.active || zone.cleared || zone.definition->waves.empty()) {
-        return;
+        return std::nullopt;
     }
     zone.active = true;
     zone.currentWaveIndex = 0;
-    SpawnWave(zone, content, playerPosition);
+    return SpawnWave(zone, content, playerPosition);
 }
 
 bool AllEnemiesDefeated(const ZoneRuntime& zone) {
@@ -153,7 +154,7 @@ engine::AnimationClip DoorOpenClip() {
         .loop = false};
 }
 
-void AdvanceWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
+std::optional<std::string> AdvanceWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     ++zone.currentWaveIndex;
     if (zone.currentWaveIndex >= static_cast<int>(zone.definition->waves.size())) {
         zone.active = false;
@@ -161,9 +162,9 @@ void AdvanceWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 
         if (zone.definition->doorDestination.has_value()) {
             zone.doorOpenAnimation.emplace(DoorOpenClip());
         }
-    } else {
-        SpawnWave(zone, content, playerPosition);
+        return std::nullopt;
     }
+    return SpawnWave(zone, content, playerPosition);
 }
 
 // door.gd's own embedded LevelExit + level_bounds.gd's LevelExit, combined:
@@ -348,7 +349,11 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
                 const engine::Rect worldTrigger{localTrigger.x + zone.worldOffsetX, localTrigger.y,
                                                  localTrigger.width, localTrigger.height};
                 if (engine::Intersects(CollisionBox(level.player), worldTrigger)) {
-                    ActivateZone(zone, *level.content, level.player.position);
+                    if (const std::optional<std::string> bossTitle =
+                            ActivateZone(zone, *level.content, level.player.position);
+                        bossTitle.has_value() && !bossTitle->empty()) {
+                        level.bossTitleBanner = BossTitleBanner{*bossTitle, 0.0f};
+                    }
                     break;
                 }
             }
@@ -357,10 +362,21 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
 
     for (ZoneRuntime& zone : level.zones) {
         if (zone.active && AllEnemiesDefeated(zone)) {
-            AdvanceWave(zone, *level.content, level.player.position);
+            if (const std::optional<std::string> bossTitle = AdvanceWave(zone, *level.content, level.player.position);
+                bossTitle.has_value() && !bossTitle->empty()) {
+                level.bossTitleBanner = BossTitleBanner{*bossTitle, 0.0f};
+            }
         }
         if (zone.doorOpenAnimation.has_value()) {
             zone.doorOpenAnimation->Update(dt);
+        }
+    }
+
+    // level_ui.gd's show_boss_title() total lifetime -- see BossTitleBanner.
+    if (level.bossTitleBanner.has_value()) {
+        level.bossTitleBanner->elapsed += dt;
+        if (level.bossTitleBanner->elapsed >= 6.0f) {
+            level.bossTitleBanner.reset();
         }
     }
 

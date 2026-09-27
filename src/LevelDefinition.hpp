@@ -24,10 +24,13 @@ struct WaveSpawnGroup {
     int count = 1;
 };
 
-// WaveData: every group spawns together when the wave starts. (WaveData's
-// boss_title is not ported yet -- it drives the boss banner, an M5 item.)
+// WaveData: every group spawns together when the wave starts. bossTitle
+// (empty for every non-boss wave) names the banner to show the instant the
+// wave spawns -- zone_runtime.gd's _spawn_wave(): "if wave.boss_title != '':
+// trigger_boss_title.emit(wave.boss_title)".
 struct WaveDefinition {
     std::vector<WaveSpawnGroup> groups;
+    std::string bossTitle;
 
     int TotalEnemyCount() const {
         int total = 0;

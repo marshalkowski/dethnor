@@ -1,0 +1,18 @@
+// data/ai_configs/boss_executioner_ai.tres + data/ai_states/executioner_engage.tres
+// (executioner_engage.gd). detect_range=398 (Consts.SCREEN_WIDTH) means it effectively always
+// detects the player once in its zone. Both attacks share ONE cooldown (ExecutionerEngage's single
+// cooldown_timer, not a per-option one like every other migrated enemy) and both turn to face the
+// target the instant either fires (the source's single get_command turns to face before splitting
+// into light/heavy). Spin Slash (light) outweighs Chop (heavy) so within 40 it always wins, matching
+// "if to_target.length() < 40.0: return LIGHT; return HEAVY" exactly (heavy's own max reach is 50,
+// attack_range in the source, beyond which it falls back to approaching).
+{
+  "start_mode": "active",
+  "detect_range": 398.0,
+  "approach": true,
+  "shared_cooldown": true,
+  "attacks": [
+    { "command": "light", "range": 40.0, "cooldown": 1.0, "weight": 2.0, "face_target": true },
+    { "command": "heavy", "range": 50.0, "cooldown": 1.0, "weight": 1.0, "face_target": true }
+  ]
+}

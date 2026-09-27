@@ -56,6 +56,7 @@ HudAssets LoadHudAssets(engine::Engine& app) {
         .unitHp = app.LoadTexture("sprites/ui/MBEU_ui_unit_hp.png"),
         .unitStamina = app.LoadTexture("sprites/ui/MBEU_ui_unit_block.png"),
         .unitMp = app.LoadTexture("sprites/ui/MBEU_ui_unit_mp.png"),
+        .executionerBossTitle = app.LoadTexture("sprites/ui/MBEU_boss_title_scroll-Executioner_In.png"),
     };
 }
 
@@ -81,17 +82,47 @@ void DrawHud(engine::Engine& app, const Character& player, PlayerClass playerCla
               player.stamina / player.definition->maxStamina);
 
     // level_ui.gd's init(): "if character.config.max_magic_points == 0:
-    // mp_meter.visible = false" -- hidden entirely, not shown empty. Knight
-    // is 0 (no spell system exists yet to ever make this nonzero).
+    // mp_meter.visible = false" -- hidden entirely, not shown empty (Knight/
+    // Rogue are both 0; only the Wizard has real MP).
     if (player.definition->maxMagicPoints > 0.0f) {
         meterY += 8.0f;
-        DrawMeter(app, assets.labelMp, assets.unitMp, meterX, meterY, 0.0f);
+        DrawMeter(app, assets.labelMp, assets.unitMp, meterX, meterY,
+                  player.magicPoints / player.definition->maxMagicPoints);
     }
 
     constexpr float classLabelX = avatarX;
     constexpr float classLabelY = avatarY + avatarSize + 2.0f;
     app.DrawSprite(assets.playerName[classIndex], classLabelX, classLabelY);
 
+    app.EndCameraMode();
+}
+
+void DrawBossTitleBanner(engine::Engine& app, const std::string& title, float elapsed, const HudAssets& assets) {
+    if (title != "executioner") {
+        return; // the only boss ported so far
+    }
+    // level_ui.gd's show_boss_title(): PROGRESS_SIGN_DELAY(1.0) invisible,
+    // then the clip (5 frames @ 0.2s -- boss_title_frames.tres's own speed),
+    // then held on its last frame until the full sequence's end (6.0s total
+    // -- see BossTitleBanner).
+    constexpr float delay = 1.0f;
+    constexpr float frameDuration = 0.2f;
+    constexpr int frameCount = 5;
+    if (elapsed < delay) {
+        return;
+    }
+    const int frame = std::min(frameCount - 1, static_cast<int>((elapsed - delay) / frameDuration));
+
+    const engine::Camera2D hudCamera{.position = {nativeWidth * 0.5f, nativeHeight * 0.5f}, .zoom = pixelScale};
+    app.BeginCameraMode(hudCamera);
+    constexpr float frameWidth = 256.0f;
+    constexpr float frameHeight = 64.0f;
+    // BossTitle/AnimatedSprite2D's own authored position (199, 112) -- dead
+    // center of the native 398x224 screen; AnimatedSprite2D is centered on
+    // its own position by default.
+    app.DrawSpriteRegion(assets.executionerBossTitle,
+                        engine::Rect{static_cast<float>(frame) * frameWidth, 0.0f, frameWidth, frameHeight},
+                        199.0f - frameWidth * 0.5f, 112.0f - frameHeight * 0.5f);
     app.EndCameraMode();
 }
 

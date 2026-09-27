@@ -56,6 +56,13 @@ struct AIDefinition {
     // The Mimic has no Chase; it is immobile and only ever attacks.
     bool approach = true;
 
+    // ExecutionerEngage.gd's single cooldown_timer, shared across every
+    // attack option instead of each tracking its own independently (the
+    // Mimic's bite/grab, and every basic_ai.tres user, each have their own) --
+    // firing ANY option starts the same one shared timer, gating all of
+    // them until it elapses.
+    bool sharedCooldown = false;
+
     std::vector<AIAttackOption> attacks;
 };
 

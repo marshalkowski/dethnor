@@ -83,7 +83,8 @@ void TestChain(const ContentLibrary& content) {
 
     // Level 3's stray self-pointing destination must not have made a door.
     Check(!content.Level(1, 3).zones[0].doorDestination.has_value(), "L3 has no door");
-    Check(content.Level(1, 3).zones[0].waves.empty(), "L3 has no wave yet (Executioner is M5)");
+    Check(content.Level(1, 3).zones[0].waves.size() == 1 && content.Level(1, 3).zones[0].waves[0].bossTitle == "executioner",
+          "L3's one wave is the Executioner boss");
 }
 
 // --- 2. Scripted playthrough ------------------------------------------------
@@ -215,6 +216,7 @@ void TestPlaythrough(const ContentLibrary& content) {
     const CharacterDefinition& zombie = content.Character("enemy_zombie");
     const CharacterDefinition& skeleton = content.Character("enemy_skeleton");
     const CharacterDefinition& mimic = content.Character("enemy_mimic");
+    const CharacterDefinition& executioner = content.Character("enemy_executioner");
 
     SessionState session;
     Destination destination{1, 1, "ps0"};
@@ -256,12 +258,23 @@ void TestPlaythrough(const ContentLibrary& content) {
         destination = *run.exit;
     }
 
-    // --- Level 3: nothing to fight yet; walk off the left edge back to L2.
+    // --- Level 3: the Executioner boss, no door -- fight it, then leave via
+    // the left edge (which the bot could do without fighting at all, since
+    // nothing gates it on clearing the zone; fighting first exercises the
+    // boss's chain/shared-cooldown AI through the real production path).
     {
         LevelRuntime level = BuildLevelRuntime(destination, session, content, knight);
-        const LevelRun run = RunLevel(level, true, 60.0f);
-        std::printf("  L3: %s after %.1fs\n", run.exit ? Describe(*run.exit).c_str() : "NO EXIT", run.seconds);
-        Check(Is(run.exit, 1, 2, "ps1"), "playthrough: L3's left edge leads back to L2/ps1");
+        const LevelRun fight = RunLevel(level, false, 120.0f);
+        std::printf("  L3 fight: %s after %.1fs (HP %.0f)\n", fight.exit ? Describe(*fight.exit).c_str() : "NO EXIT",
+                    fight.seconds, level.player.hitPoints);
+        Check(!fight.exit.has_value(), "playthrough: L3 has no door, so fighting alone never exits");
+        Check(level.zones[0].cleared, "playthrough: L3 zone cleared (Executioner defeated)");
+        Check(Count(fight.roster[0], executioner) == 1, "L3 wave: 1 Executioner");
+
+        const LevelRun leave = RunLevel(level, true, 60.0f);
+        std::printf("  L3 leave: %s after %.1fs\n", leave.exit ? Describe(*leave.exit).c_str() : "NO EXIT",
+                    leave.seconds);
+        Check(Is(leave.exit, 1, 2, "ps1"), "playthrough: L3's left edge leads back to L2/ps1");
     }
 }
 

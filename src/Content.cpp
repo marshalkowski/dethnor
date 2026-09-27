@@ -236,6 +236,7 @@ AIDefinition ParseAI(const json& j) {
     ai.startDormant = (startMode == "dormant");
     ai.detectRange = Opt(j, "detect_range", 0.0f);
     ai.approach = Opt(j, "approach", true);
+    ai.sharedCooldown = Opt(j, "shared_cooldown", false);
     for (const json& entry : j.at("attacks")) {
         AIAttackOption option;
         option.command = CommandFrom(entry.at("command").get<std::string>());
@@ -414,6 +415,7 @@ ZoneDefinition ParseZone(const json& j, const ContentLibrary& library) {
             }
             wave.groups.push_back(std::move(group));
         }
+        wave.bossTitle = Opt(waveJson, "boss_title", std::string());
         zone.waves.push_back(std::move(wave));
     }
     if (!zone.waves.empty() && (spawnRects.empty() || zone.triggerRects.empty())) {

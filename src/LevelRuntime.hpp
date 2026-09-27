@@ -76,6 +76,19 @@ struct LevelTextures {
     engine::TextureHandle doorOpen;
 };
 
+// level_ui.gd's show_boss_title(): triggered the instant a wave with a
+// non-empty bossTitle spawns (zone_runtime.gd's _spawn_wave()). The source
+// awaits through PROGRESS_SIGN_DELAY(1.0) invisible, then plays "{title}_in"
+// (5 frames), then "hold", then "exit" -- but only "_in" actually exists in
+// boss_title_frames.tres (a genuine content gap, not a porting loss), so the
+// practical effect reproduced here is: invisible for 1s, plays its one clip
+// once (1s), holds the last frame for a further 3.5s, then hides -- 6s total
+// from trigger to gone.
+struct BossTitleBanner {
+    std::string title;
+    float elapsed = 0.0f;
+};
+
 // LevelData + LevelRuntime's build/spawn logic. Owns every zone for the
 // current level and the player themselves (matching the source: the entire
 // level_runtime.tscn subtree, player included, is torn down and rebuilt
@@ -88,6 +101,7 @@ struct LevelRuntime {
 
     Character player;
     CombatWorld combatWorld;
+    std::optional<BossTitleBanner> bossTitleBanner;
 
     // Drawing assets. Absent until LoadLevelTextures runs, so the level's
     // logic (zones, waves, doors, transitions) can be built and stepped
