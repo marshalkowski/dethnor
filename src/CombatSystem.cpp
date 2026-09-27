@@ -42,6 +42,7 @@ void SpawnFloatingText(CombatWorld& world, engine::Vec2 nearPosition, const std:
 void ApplyDamage(engine::Vec2 attackerPosition, Character* attacker, Character& defender,
                  const ActionDefinition& action, CombatWorld& world) {
     defender.wasHit = true; // hit_last_frame is set before the block check in the source
+    world.hitSoundRequested = true; // likewise -- plays even on a hit that turns out to be blocked
 
     const bool fromLeft = attackerPosition.x < defender.position.x;
 

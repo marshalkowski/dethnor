@@ -64,6 +64,20 @@ struct CombatWorld {
     std::vector<FloatingText> floatingTexts;
     std::vector<ProjectileInstance> projectiles;
     std::vector<FxInstance> fx;
+
+    // base_character.gd's _on_hurtbox_damage_received plays a hit sound on
+    // every hit that actually reaches a live, non-invulnerable target (even
+    // a blocked one -- it's checked before the block branch), via a node
+    // path (/root/Node2D/AudioStreamPlayer2D) that only exists in an unused
+    // sandbox scene, so real play is silently silent (see MIGRATION_PLAN.md
+    // section 1's "open question" -- resolved for M5 as "port the intended
+    // design"). Set by ApplyDamage; CombatSystem.cpp has no Engine reference
+    // at all (Update*/Resolve* are pure logic), so the caller that owns one
+    // (main.cpp, once per frame after UpdateLevelRuntime returns) is what
+    // actually calls PlaySound and clears this -- the same
+    // request-flag-consumed-by-a-higher-layer pattern
+    // spawnProjectileRequested/spawnFxRequested already use.
+    bool hitSoundRequested = false;
 };
 
 // Checks attacker's active hitbox against defender's hurtbox; if it lands,

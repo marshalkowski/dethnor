@@ -87,6 +87,13 @@ int main() {
     const dethnor::EffectAssets effectAssets = dethnor::LoadEffectAssets(app, content);
     const dethnor::HudAssets hudAssets = dethnor::LoadHudAssets(app);
     const dethnor::TitleScreenAssets titleAssets = dethnor::LoadTitleScreenAssets(app);
+    // base_character.gd's hit sound: a real one, ported as the intended
+    // design rather than the current (broken-node-path) silence -- see
+    // MIGRATION_PLAN.md's M5 hit-sound decision and CombatWorld::
+    // hitSoundRequested. No pitch variation (Bengine's PlaySound has no
+    // pitch/volume/instance control at all -- flagged as a gap, not added
+    // without approval).
+    const engine::SoundHandle hitSound = app.LoadSound("sfx/hitHurt.wav");
 
     // GameManager's real lifetime: a single instance for the whole process,
     // never reset when returning to the title screen. This is a deliberate,
@@ -151,6 +158,10 @@ int main() {
                     dethnor::EnterDestination(session, g.level.player, *exit);
                     g.level = StartLevel(*exit);
                     g.camera = MakeCameraForLevel(g.level);
+                }
+                if (g.level.combatWorld.hitSoundRequested) {
+                    app.PlaySound(hitSound);
+                    g.level.combatWorld.hitSoundRequested = false;
                 }
             }
 
