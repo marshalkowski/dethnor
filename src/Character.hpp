@@ -51,6 +51,12 @@ struct Character {
     const ActionDefinition* currentAction = nullptr;
     int actionFrameIndex = 0;
     float actionFrameTime = 0.0f;
+    // Set mid-action when one of currentAction's chains gets its command
+    // consumed from the input buffer (or, for a Command::None chain,
+    // unconditionally on entry) -- action_data_state.gd's
+    // next_action_queued. Consulted only when the current action finishes;
+    // nullptr means fall back to Idle as usual.
+    const ActionDefinition* nextActionQueued = nullptr;
     bool actionHitboxWasActive = false; // edge-detects hitbox activation
     // One hit per TARGET per activation, like Godot's Area2D edge trigger --
     // tracked per defender (not a single flag) since M3 added multi-enemy
@@ -130,6 +136,13 @@ struct MovementBounds {
 // hitbox-vs-hurtbox damage between characters -- see CombatSystem.hpp for
 // that (it needs both characters at once, after each has been advanced).
 void UpdateCharacter(Character& character, const MovementBounds& bounds, float dt);
+
+// base_character.gd's grant_iframes(): invulnerability for the character's
+// own iframesOnHitSec duration (0 disables it entirely). Shared between
+// on-hit invulnerability (CombatSystem.cpp) and an action's own
+// gives_iframes/iframes_start_frame (e.g. a dodge roll) -- both are the same
+// mechanic in the source, just triggered from different places.
+void GrantIframes(Character& character);
 
 engine::Rect CollisionBox(const Character& character);
 engine::Rect HurtboxWorldRect(const Character& character);

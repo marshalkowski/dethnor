@@ -27,16 +27,6 @@ void SpawnFloatingText(CombatWorld& world, engine::Vec2 nearPosition, const std:
     });
 }
 
-void GrantIframes(Character& character) {
-    if (character.definition->iframesOnHitSec == 0.0f) {
-        return;
-    }
-    character.iframeTimer = character.definition->iframesOnHitSec;
-    character.iframeBlinkTimer = 0.0f;
-    character.iframeBlinkVisible = true;
-    character.isInvulnerable = true;
-}
-
 // BaseCharacter._on_hurtbox_damage_received, in the same order (block check
 // -> damage -> forced facing -> knockback compute -> death check -> stun ->
 // hit-stop -> knockback/stunned dispatch -> iframes).

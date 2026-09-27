@@ -1,8 +1,10 @@
 #pragma once
 
+#include "Command.hpp"
 #include "engine/Engine.hpp"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dethnor {
@@ -12,6 +14,23 @@ namespace dethnor {
 // full. A single struct with a kind tag is a faithful, simpler equivalent to
 // the two-subclass hierarchy; nothing is lost by unifying them.
 enum class ActionKind { Attack, Block };
+
+struct ActionDefinition;
+
+// action_data_state.gd's _handle_combo_input(): checked every frame for the
+// whole lifetime of the action (not gated to any particular frame window --
+// unlike active_frames/move_frames), against every chain this action has.
+// The first one whose command is buffered wins (Godot's loop has no early
+// break, so with more than one simultaneously buffered the LAST match in
+// declared order actually wins; not reproduced -- in every migrated action
+// at most one chain command is realistically buffered at once). Command::
+// None is the one exception: action_data_state.gd's enter() queues that
+// chain unconditionally, no input needed at all (a forced follow-through --
+// not used by any character ported so far, but the mechanism supports it).
+struct ActionChain {
+    Command command;
+    const ActionDefinition* next;
+};
 
 // Godot's ActionDataState overrides the character's displayed sprite frame
 // directly from its own gameplay frame counter (`_animated_sprite.frame =
@@ -64,6 +83,29 @@ struct ActionDefinition {
     // action_finished) or (sustainable and input released)").
     bool sustainable = false;
     float sustainStaminaCostPerSec = 0.0f;
+
+    // BlockData's gives_iframes/iframes_start_frame (e.g. a dodge roll):
+    // grants invulnerability partway through the action, for the
+    // character's own iframesOnHitSec duration -- Godot's grant_iframes()
+    // reuses that same post-hit-iframe timer rather than a separate one.
+    bool givesIframes = false;
+    int iframesStartFrame = 0;
+
+    // BlockData's move_vector/move_frames (a dodge roll's dash): while
+    // actionFrameIndex is one of moveFrames, the character is displaced by
+    // moveVector (facing-relative, both axes -- Godot's own
+    // `move_vector * facing`) each frame, in addition to whatever the
+    // action's animation is doing.
+    engine::Vec2 moveVector{};
+    std::vector<int> moveFrames;
+
+    // Raw target-id strings from JSON ("light": "rogue_slash_2"), kept only
+    // until LoadContent's post-pass resolves each into `chains` below (an
+    // action may chain to another one that hasn't loaded yet, since
+    // ContentLibrary::actions loads in file-sort order) -- empty again once
+    // resolved.
+    std::vector<std::pair<Command, std::string>> pendingChainIds;
+    std::vector<ActionChain> chains;
 
     int FrameCount() const { return static_cast<int>(frameColumns.size()); }
 };

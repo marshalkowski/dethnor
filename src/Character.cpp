@@ -117,12 +117,23 @@ void EnterAction(Character& character, const ActionDefinition& action) {
     character.actionHitTargets.clear();
     character.isMoving = false;
     character.stamina = std::max(0.0f, character.stamina - action.initialStaminaCost);
+
+    // action_data_state.gd's enter(): a Command::None chain queues
+    // unconditionally, no buffered input needed at all.
+    character.nextActionQueued = nullptr;
+    for (const ActionChain& chain : action.chains) {
+        if (chain.command == Command::None) {
+            character.nextActionQueued = chain.next;
+        }
+    }
 }
 
 // action_data_state.gd's update(): frame advancement, sustained stamina
-// drain, and the finish/release exit condition. Hitbox-vs-hurtbox resolution
+// drain, the mid-action iframe grant/dash (gives_iframes/move_frames),
+// combo-chain input, and the finish/release exit condition (which prefers a
+// queued chain over falling back to Idle). Hitbox-vs-hurtbox resolution
 // itself lives in CombatSystem.cpp (it needs both characters at once).
-void UpdateAction(Character& character, float dt) {
+void UpdateAction(Character& character, const MovementBounds& bounds, float dt) {
     const ActionDefinition& action = *character.currentAction;
 
     if (action.sustainable) {
@@ -144,11 +155,36 @@ void UpdateAction(Character& character, float dt) {
         ++character.actionFrameIndex;
     }
 
+    if (action.givesIframes && character.actionFrameIndex == action.iframesStartFrame) {
+        GrantIframes(character);
+    }
+    if (std::find(action.moveFrames.begin(), action.moveFrames.end(), character.actionFrameIndex) !=
+        action.moveFrames.end()) {
+        // BlockData's move_vector * facing -- both axes, not just X (every
+        // migrated dodge/roll happens to have moveVector.y == 0, but this
+        // matches the source literally rather than assuming that stays true).
+        character.position.x += action.moveVector.x * static_cast<float>(character.facing) * dt;
+        character.position.y += action.moveVector.y * static_cast<float>(character.facing) * dt;
+        ClampToBounds(character.position, bounds);
+    }
+
+    // _handle_combo_input(): checked every frame for the action's whole
+    // lifetime, not gated to any frame window.
+    for (const ActionChain& chain : action.chains) {
+        if (chain.command != Command::None && character.inputBuffer.Consume(chain.command)) {
+            character.nextActionQueued = chain.next;
+        }
+    }
+
     const bool finished = character.actionFrameIndex >= action.FrameCount();
     const bool released = action.sustainable && !character.sustainInputHeld;
     if ((!action.sustainable && finished) || (action.sustainable && released)) {
-        character.state = CombatState::Idle;
-        character.currentAction = nullptr;
+        if (character.nextActionQueued != nullptr) {
+            EnterAction(character, *character.nextActionQueued);
+        } else {
+            character.state = CombatState::Idle;
+            character.currentAction = nullptr;
+        }
     }
 }
 
@@ -216,6 +252,16 @@ void UpdateStaminaRegen(Character& character, float dt) {
 
 } // namespace
 
+void GrantIframes(Character& character) {
+    if (character.definition->iframesOnHitSec == 0.0f) {
+        return;
+    }
+    character.iframeTimer = character.definition->iframesOnHitSec;
+    character.iframeBlinkTimer = 0.0f;
+    character.iframeBlinkVisible = true;
+    character.isInvulnerable = true;
+}
+
 Character SpawnCharacter(const CharacterDefinition& def, engine::Vec2 position, int facing) {
     Character character(def);
     character.position = position;
@@ -260,7 +306,7 @@ void UpdateCharacter(Character& character, const MovementBounds& bounds, float d
         break;
     case CombatState::Attack:
     case CombatState::Block:
-        UpdateAction(character, dt);
+        UpdateAction(character, bounds, dt);
         break;
     case CombatState::Knockback:
         UpdateKnockback(character, bounds, dt);

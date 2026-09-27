@@ -133,6 +133,22 @@ ActionDefinition ParseAction(const json& j) {
     action.initialStaminaCost = Opt(j, "initial_stamina_cost", 0.0f);
     action.sustainable = Opt(j, "sustainable", false);
     action.sustainStaminaCostPerSec = Opt(j, "sustain_stamina_cost_per_sec", 0.0f);
+
+    action.givesIframes = Opt(j, "gives_iframes", false);
+    action.iframesStartFrame = Opt(j, "iframes_start_frame", 0);
+    action.moveVector = OptVec2(j, "move_vector", {0.0f, 0.0f});
+    action.moveFrames = Opt(j, "move_frames", std::vector<int>{});
+
+    // "chains": {"light": "rogue_slash_2", ...} -- command name -> action id.
+    // The target may not have loaded yet (ContentLibrary::actions loads in
+    // file-sort order), so only the raw id is kept here; LoadContent resolves
+    // every pendingChainIds entry into `chains` once the whole directory is
+    // loaded (see LoadContent).
+    if (j.contains("chains")) {
+        for (const auto& [commandName, targetId] : j.at("chains").items()) {
+            action.pendingChainIds.emplace_back(CommandFrom(commandName), targetId.get<std::string>());
+        }
+    }
     return action;
 }
 
@@ -416,6 +432,23 @@ void ValidateDestinations(const ContentLibrary& library) {
     }
 }
 
+// Resolves every action's pendingChainIds (raw "chains" target ids from its
+// own JSON) into real pointers, now that the whole actions/ directory is
+// loaded and every id it could reference actually exists -- see
+// ActionDefinition::pendingChainIds.
+void ResolveActionChains(ContentLibrary& library) {
+    for (auto& [id, action] : library.actions) {
+        for (const auto& [command, targetId] : action.pendingChainIds) {
+            const auto target = library.actions.find(targetId);
+            if (target == library.actions.end()) {
+                throw std::runtime_error("action \"" + id + "\" chains to unknown action \"" + targetId + "\"");
+            }
+            action.chains.push_back(ActionChain{command, &target->second});
+        }
+        action.pendingChainIds.clear();
+    }
+}
+
 } // namespace
 
 const CharacterDefinition& ContentLibrary::Character(const std::string& id) const {
@@ -438,6 +471,7 @@ const LevelDefinition& ContentLibrary::Level(int world, int level) const {
 ContentLibrary LoadContent(const fs::path& dataRoot) {
     ContentLibrary library;
     LoadDirectory(dataRoot / "actions", library.actions, [](const json& j) { return ParseAction(j); });
+    ResolveActionChains(library);
     LoadDirectory(dataRoot / "ai", library.ai, [](const json& j) { return ParseAI(j); });
     LoadDirectory(dataRoot / "characters", library.characters,
                   [&library](const json& j) { return ParseCharacter(j, library); });
