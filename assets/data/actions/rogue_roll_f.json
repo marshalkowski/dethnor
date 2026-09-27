@@ -1,0 +1,15 @@
+// data/blocks/rogue_roll_f.tres (BlockData). "f_roll" clip: Roll-F.png, columns 1-10. Bound directly to
+// Block+Forward -- a forward dash with its own iframe window, that can chain into rogue_stabup (a
+// Heavy+Up press near the end of the roll) for a follow-through stab.
+{
+  "kind": "block",
+  "texture": "sprites/characters/rogue/MBEU_rogue-Roll-F.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "initial_stamina_cost": 20.0,
+  "gives_iframes": true,
+  "iframes_start_frame": 2,
+  "move_vector": [100, 0],
+  "move_frames": [2, 3, 4, 5, 6, 7, 8, 9],
+  "chains": { "heavy_up": "rogue_stabup" }
+}

@@ -61,7 +61,7 @@ bool UpdateTitleScreen(TitleScreenState& state, engine::Engine& app, float dt) {
 
     // Godot's default ui_accept binding covers both Enter and Space.
     const bool accepted = app.IsKeyPressed(engine::Key::Enter) || app.IsKeyPressed(engine::Key::Space);
-    return accepted && state.selection == PlayerClass::Knight;
+    return accepted && (state.selection == PlayerClass::Knight || state.selection == PlayerClass::Rogue);
 }
 
 void DrawTitleScreen(engine::Engine& app, const TitleScreenState& state, const TitleScreenAssets& assets) {
@@ -78,7 +78,7 @@ void DrawTitleScreen(engine::Engine& app, const TitleScreenState& state, const T
         {assets.rogueIcon, 64.0f, 0.0f},
     };
     const char* names[3] = {"Knight", "Wizard", "Rogue"};
-    const bool available[3] = {true, false, false};
+    const bool available[3] = {true, false, true};
 
     constexpr float iconGap = 10.0f;
     constexpr float step = iconFrameSize + iconGap;

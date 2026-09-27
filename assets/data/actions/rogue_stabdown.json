@@ -1,0 +1,14 @@
+// data/attacks/rogue_stabdown.tres (AttackData). "stabdown" clip: Stabdown.png, columns 1-10. Bound
+// directly to Heavy -- no chain, the Rogue's standalone heavy attack.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/rogue/MBEU_rogue-Stabdown.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "active_frames": [7, 8, 9],
+  "damage": 20,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [16, -22.5],
+  "hitbox_size": [15, 22]
+}

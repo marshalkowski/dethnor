@@ -1,0 +1,17 @@
+// data/attacks/rogue_stab_1.tres (AttackData; the .tres's own resource name is "Rogue Stab 2", a
+// transcription slip in the source itself -- not reproduced here, the file/chain position is what
+// matters). "strike" clip: Strike-Fwd.png, columns 1-4. Reached only via rogue_slash_2's chain. Chains
+// into rogue_stab_2 on a further Light press.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/rogue/MBEU_rogue-Strike-Fwd.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4],
+  "active_frames": [1, 2, 3],
+  "damage": 10,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [17, -26],
+  "hitbox_size": [21, 8],
+  "chains": { "light": "rogue_stab_2" }
+}

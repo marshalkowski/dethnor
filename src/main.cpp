@@ -55,6 +55,23 @@ dethnor::LevelCamera MakeCameraForLevel(const dethnor::LevelRuntime& level) {
     return dethnor::MakeLevelCamera({startX, 112.0f});
 }
 
+// class_selector.gd's set_player_class(): which CharacterDefinition a level
+// is built with. Wizard isn't ported yet (mid-flight M5), so it isn't in
+// this lookup at all -- TitleScreen.cpp's own `available` gate keeps
+// UpdateTitleScreen from ever returning true while Wizard is selected, so
+// this is never asked to resolve it.
+const dethnor::CharacterDefinition& PlayerDefinitionFor(dethnor::PlayerClass playerClass,
+                                                         const dethnor::ContentLibrary& content) {
+    switch (playerClass) {
+    case dethnor::PlayerClass::Rogue:
+        return content.Character("player_rogue");
+    case dethnor::PlayerClass::Knight:
+    case dethnor::PlayerClass::Wizard:
+        return content.Character("player_knight");
+    }
+    return content.Character("player_knight");
+}
+
 } // namespace
 
 int main() {
@@ -68,7 +85,6 @@ int main() {
     // All gameplay content comes from assets/data/**.json (see Content.hpp);
     // a malformed file throws here, at startup, naming the file and key.
     const dethnor::ContentLibrary content = dethnor::LoadContent(app.ResolveAssetPath("data"));
-    const dethnor::CharacterDefinition& knightDefinition = content.Character("player_knight");
     const dethnor::CharacterAssetMap characterAssets = dethnor::LoadCharacterAssets(app, content.characters);
     const dethnor::HudAssets hudAssets = dethnor::LoadHudAssets(app);
     const dethnor::TitleScreenAssets titleAssets = dethnor::LoadTitleScreenAssets(app);
@@ -83,9 +99,11 @@ int main() {
     dethnor::SessionState session;
 
     // Builds a level for `destination` from the current session (spawn point +
-    // carried HP/stamina/MP) and loads its art.
+    // carried HP/stamina/MP, and the session's own selected class) and loads
+    // its art.
     const auto StartLevel = [&](const dethnor::Destination& destination) {
-        dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, content, knightDefinition);
+        const dethnor::CharacterDefinition& playerDefinition = PlayerDefinitionFor(session.playerClass, content);
+        dethnor::LevelRuntime level = dethnor::BuildLevelRuntime(destination, session, content, playerDefinition);
         dethnor::LoadLevelTextures(level, app);
         return level;
     };
@@ -104,7 +122,7 @@ int main() {
                 // then load the level. Only player_class is overwritten
                 // here -- session.destination/cached stats are deliberately
                 // left as-is (see the SessionState comment above).
-                session.playerClass = dethnor::PlayerClass::Knight;
+                session.playerClass = titleScreen->selection;
                 const dethnor::Destination start{1, 1, "ps0"};
                 const dethnor::Destination& destination = session.hasDestination ? session.destination : start;
                 dethnor::LevelRuntime level = StartLevel(destination);
@@ -156,7 +174,7 @@ int main() {
             app.BeginCameraMode(g.camera.camera);
             dethnor::DrawLevelRuntime(app, g.level, characterAssets);
             app.EndCameraMode();
-            dethnor::DrawHud(app, g.level.player, hudAssets);
+            dethnor::DrawHud(app, g.level.player, session.playerClass, hudAssets);
             break;
         }
         }

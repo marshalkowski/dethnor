@@ -1,0 +1,14 @@
+// data/attacks/rogue_stabup.tres (AttackData). "stabup" clip: Stab-Up.png, columns 0-2. Reached only via
+// rogue_roll_f's chain -- the roll's big finisher (40 damage, more than any other Rogue hit).
+{
+  "kind": "attack",
+  "texture": "sprites/characters/rogue/MBEU_rogue-Stab-Up.png",
+  "frame_size": [64, 64],
+  "frames": [0, 1, 2],
+  "active_frames": [0, 1, 2],
+  "damage": 40,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [16, -26],
+  "hitbox_size": [15, 22]
+}

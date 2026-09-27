@@ -1,0 +1,15 @@
+// data/blocks/rogue_dodge.tres (BlockData). "block" clip: Block.png, columns 1-15. Bound directly to
+// Block -- unlike the Knight's stationary basic_block, this is a finite dash: not sustainable, grants
+// iframes partway through, and displaces the Rogue backward while it plays (M5 moveset work: the first
+// move_vector/move_frames content ported).
+{
+  "kind": "block",
+  "texture": "sprites/characters/rogue/MBEU_rogue-Block.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  "initial_stamina_cost": 15.0,
+  "gives_iframes": true,
+  "iframes_start_frame": 3,
+  "move_vector": [-50, 0],
+  "move_frames": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+}

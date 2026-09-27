@@ -1,0 +1,24 @@
+// data/character_configs/players/player_rogue.tres. Overrides speed/name/frames/actions/max_hit_points;
+// everything else (collision/hurtbox/stamina/knockback/iframes) is a CharacterConfig default, same as the
+// Knight's own config -- confirmed by reading the full .tres (no other field is set).
+{
+  "speed": 60,
+  "max_hit_points": 50,
+  "sprite_frame_size": [64, 64],
+  "animations": {
+    // rogue_frames.tres: "idle" 6 frames speed=5; "walk" 4 frames speed=7
+    "idle":      { "texture": "sprites/characters/rogue/MBEU_rogue-Idle-6.png", "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "walk":      { "texture": "sprites/characters/rogue/MBEU_rogue-Walk.png",   "first_frame": 0, "frame_count": 4, "fps": 7.0 },
+    "knockback": { "texture": "sprites/characters/rogue/MBEU_rogue-Hit.png",    "first_frame": 1, "frame_count": 1, "fps": 1.0 },
+    // "fall" (Fall.png): 4 frames at columns 1-4, speed=10
+    "fall":      { "texture": "sprites/characters/rogue/MBEU_rogue-Fall.png",   "first_frame": 1, "frame_count": 4, "fps": 10.0 }
+  },
+  // Order is real tie-break priority (see rogue_roll_f/dodge: block_forward must be checked before the
+  // plain block it would otherwise be swallowed by via InputBuffer::Consume's directional fallback).
+  "actions": [
+    { "command": "block_forward", "action": "rogue_roll_f" },
+    { "command": "block",         "action": "rogue_dodge" },
+    { "command": "heavy",         "action": "rogue_stabdown" },
+    { "command": "light",         "action": "rogue_slash_1" }
+  ]
+}

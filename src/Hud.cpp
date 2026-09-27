@@ -42,29 +42,38 @@ void DrawMeter(engine::Engine& app, engine::TextureHandle label, engine::Texture
 } // namespace
 
 HudAssets LoadHudAssets(engine::Engine& app) {
+    // Indexed by PlayerClass (Knight/Wizard/Rogue) -- Wizard's own art isn't
+    // ported yet (M5 is still mid-flight), so it reuses the Knight's in the
+    // meantime; DrawHud will never actually be asked to draw it before
+    // Wizard is selectable.
     return HudAssets{
-        .avatarFrame = app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_knight.png"),
+        .avatarFrame = {app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_knight.png"),
+                         app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_knight.png"),
+                         app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_rogue.png")},
+        .playerName = {app.LoadTexture("sprites/ui/MBEU_ui_player_name_knight.png"),
+                        app.LoadTexture("sprites/ui/MBEU_ui_player_name_knight.png"),
+                        app.LoadTexture("sprites/ui/MBEU_ui_player_name_rogue.png")},
         .labelHp = app.LoadTexture("sprites/ui/MBEU_ui_label_hp.png"),
         .labelStamina = app.LoadTexture("sprites/ui/MBEU_ui_label_stamina.png"),
         .labelMp = app.LoadTexture("sprites/ui/MBEU_ui_label_mp.png"),
         .unitHp = app.LoadTexture("sprites/ui/MBEU_ui_unit_hp.png"),
         .unitStamina = app.LoadTexture("sprites/ui/MBEU_ui_unit_block.png"),
         .unitMp = app.LoadTexture("sprites/ui/MBEU_ui_unit_mp.png"),
-        .playerName = app.LoadTexture("sprites/ui/MBEU_ui_player_name_knight.png"),
     };
 }
 
-void DrawHud(engine::Engine& app, const Character& player, const HudAssets& assets) {
+void DrawHud(engine::Engine& app, const Character& player, PlayerClass playerClass, const HudAssets& assets) {
     // A second, permanently-fixed camera (see Hud.hpp for why) -- native
     // 398x224 layout at the same 4x zoom the world uses, but never follows
     // the player, so the HUD stays screen-locked.
     const engine::Camera2D hudCamera{.position = {nativeWidth * 0.5f, nativeHeight * 0.5f}, .zoom = pixelScale};
     app.BeginCameraMode(hudCamera);
 
+    const std::size_t classIndex = static_cast<std::size_t>(playerClass);
     constexpr float avatarX = 2.0f;
     constexpr float avatarY = 2.0f;
     constexpr float avatarSize = 25.0f;
-    app.DrawSprite(assets.avatarFrame, avatarX, avatarY);
+    app.DrawSprite(assets.avatarFrame[classIndex], avatarX, avatarY);
 
     constexpr float meterX = avatarX + avatarSize + 2.0f;
     float meterY = avatarY;
@@ -84,7 +93,7 @@ void DrawHud(engine::Engine& app, const Character& player, const HudAssets& asse
 
     constexpr float classLabelX = avatarX;
     constexpr float classLabelY = avatarY + avatarSize + 2.0f;
-    app.DrawSprite(assets.playerName, classLabelX, classLabelY);
+    app.DrawSprite(assets.playerName[classIndex], classLabelX, classLabelY);
 
     app.EndCameraMode();
 }

@@ -1,0 +1,14 @@
+// data/attacks/rogue_stab_2.tres (AttackData). "strike_2" clip: Strike-Rear.png, columns 1-4. Reached
+// only via rogue_stab_1's chain -- the combo's terminal hit, no further chain.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/rogue/MBEU_rogue-Strike-Rear.png",
+  "frame_size": [64, 64],
+  "frames": [1, 2, 3, 4],
+  "active_frames": [1, 2, 3],
+  "damage": 10,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [23, -26],
+  "hitbox_size": [21, 8]
+}

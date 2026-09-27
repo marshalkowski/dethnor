@@ -1,0 +1,15 @@
+// data/attacks/rogue_slash_2.tres (AttackData). "slash_2" clip: LSlash-2.png, columns 0-3. Reached only
+// via rogue_slash_1's chain. Chains into rogue_stab_1 on a further Light press.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/rogue/MBEU_rogue-LSlash-2.png",
+  "frame_size": [64, 64],
+  "frames": [0, 1, 2, 3],
+  "active_frames": [1, 2, 3],
+  "damage": 5,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [16, -22],
+  "hitbox_size": [21, 27],
+  "chains": { "light": "rogue_stab_1" }
+}
