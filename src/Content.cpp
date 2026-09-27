@@ -36,12 +36,30 @@ engine::Vec2 OptVec2(const json& j, const char* key, engine::Vec2 fallback) {
     return (it == j.end()) ? fallback : Vec2From(*it);
 }
 
-// Rect2i(x, y, w, h) -> [x, y, w, h].
+// RectData's Rect2i(x, y, w, h) -> engine::Rect (top-left + size).
+//
+// The x/y in this data is the rect's CENTER, not its top-left corner. Godot
+// builds each trigger/spawn rect as a RectangleShape2D, which is centered on
+// its CollisionShape2D's position, with half-extents:
+//
+//   trigger_rect.extents = trigger_data.rect.size * 0.5   # zone_runtime.gd
+//   trigger_area.position = Vector2(trigger_data.rect.position)
+//
+// and zone_author.gd's bake/load round-trip confirms it, converting to and
+// from a corner with `position +/- size / 2`. Read as a top-left corner
+// instead, every rect lands half its height too low: world1_level2's wave
+// trigger became y 154..292 (the bottom half of the room, half of it below
+// the floor) rather than its real 85..223 (the full room height), so walking
+// across the room toward the door never entered it and the wave never
+// spawned -- and every spawn rect's center sat on the floor, so whole waves
+// spawned in a line along the bottom of the room.
 engine::Rect RectFrom(const json& j) {
     if (!j.is_array() || j.size() != 4) {
         throw std::runtime_error("expected [x, y, width, height]");
     }
-    return {j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()};
+    const float width = j[2].get<float>();
+    const float height = j[3].get<float>();
+    return {j[0].get<float>() - width * 0.5f, j[1].get<float>() - height * 0.5f, width, height};
 }
 
 // Index-aligned with the Command enum (Command.hpp / input_enum.gd).

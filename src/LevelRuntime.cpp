@@ -75,25 +75,50 @@ MovementBounds ComputeMovementBounds(const LevelRuntime& level, engine::Vec2 pos
     return bounds;
 }
 
-// zone_runtime.gd's SpawnLayout.get_random_spawn_point(): spreads enemies
-// across the zone's spawn rect. Reproduced with a deterministic spread
-// instead of randomness -- simpler, and keeps spawn placement legible/
-// reproducible during development, in the same spirit as the AI redesign's
-// preference for understandable over arbitrary-random behavior (spawn
-// placement isn't an AI decision, but the same reasoning applies).
+// zone_runtime.gd's SpawnLayout.get_random_spawn_point(): scatters each
+// enemy to an independent random point across the whole spawn rect (both
+// axes). Reproduced with a deterministic spread instead of randomness --
+// simpler, and keeps spawn placement legible/reproducible during
+// development, in the same spirit as the AI redesign's preference for
+// understandable over arbitrary-random behavior (spawn placement isn't an
+// AI decision, but the same reasoning applies).
+//
+// An earlier version only spread enemies along X and put every one of them
+// on the rect's Y midpoint, so a whole wave landed in a single line rather
+// than scattered through the rect. Cells are sampled at their centers, which
+// keeps the spread inside the rect instead of pinning the first and last row
+// to its edges.
 void SpawnWave(ZoneRuntime& zone, const ContentLibrary& content, engine::Vec2 playerPosition) {
     const WaveDefinition& wave = zone.definition->waves[static_cast<std::size_t>(zone.currentWaveIndex)];
     const engine::Rect& spawnRect = zone.definition->spawnRect;
     const int totalCount = wave.TotalEnemyCount();
     zone.enemies.clear();
     zone.enemies.reserve(static_cast<std::size_t>(totalCount));
+
+    const int columns = static_cast<int>(std::ceil(std::sqrt(static_cast<float>(totalCount))));
+    const int rows = (totalCount + columns - 1) / columns;
+
     int index = 0;
     for (const WaveSpawnGroup& group : wave.groups) {
         const CharacterDefinition& enemyDefinition = content.Character(group.enemyId);
         for (int i = 0; i < group.count; ++i, ++index) {
-            const float t = (totalCount > 1) ? static_cast<float>(index) / static_cast<float>(totalCount - 1) : 0.5f;
-            const engine::Vec2 worldPosition{zone.worldOffsetX + spawnRect.x + t * spawnRect.width,
-                                              spawnRect.y + spawnRect.height * 0.5f};
+            const int column = index % columns;
+            const int row = index / columns;
+            const float xT = (static_cast<float>(column) + 0.5f) / static_cast<float>(columns);
+            const float yT = (static_cast<float>(row) + 0.5f) / static_cast<float>(rows);
+            // Every migrated spawn rect is taller than the room's actual
+            // navigable band (its authored height carries past the floor) --
+            // harmless for a moving character, which self-corrects the
+            // instant it takes its first step (ClampToBounds), but an
+            // immobile one (the Mimic) never moves at all, so a raw
+            // out-of-band spawn would leave it permanently unreachable.
+            // Clamped here, the same way ComputeMovementBounds bounds any
+            // character's Y, so every spawn is somewhere the player can
+            // actually stand next to.
+            const float rawY = spawnRect.y + yT * spawnRect.height;
+            const float minReachableY = wallHeight + enemyDefinition.collisionTopOffset;
+            const engine::Vec2 worldPosition{zone.worldOffsetX + spawnRect.x + xT * spawnRect.width,
+                                              std::clamp(rawY, minReachableY, floorY)};
             zone.enemies.emplace_back(enemyDefinition, worldPosition, 1);
             // base_character.gd's _ready(): an AI-controlled character turns to
             // face the player at spawn if the player is to its left.
