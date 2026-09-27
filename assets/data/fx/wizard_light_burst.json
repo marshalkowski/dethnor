@@ -1,0 +1,11 @@
+// data/fx/wizard_light_burst.tres (a nameless sub_resource in spells/wizard_light_burst.tres). Purely
+// visual, no hitbox of its own (the spell action itself has one) -- fx_frames.tres's "wizard_light_burst"
+// clip: MBEU_spell_fx-LightBurst.png, 64x64/frame, columns 0-4. start_frame=2 (spawned partway through the
+// cast animation, not at frame 0).
+{
+  "texture": "sprites/fx/MBEU_spell_fx-LightBurst.png",
+  "frame_size": [64, 64],
+  "frames": [0, 1, 2, 3, 4],
+  "loop": false,
+  "start_frame": 2
+}

@@ -56,17 +56,15 @@ dethnor::LevelCamera MakeCameraForLevel(const dethnor::LevelRuntime& level) {
 }
 
 // class_selector.gd's set_player_class(): which CharacterDefinition a level
-// is built with. Wizard isn't ported yet (mid-flight M5), so it isn't in
-// this lookup at all -- TitleScreen.cpp's own `available` gate keeps
-// UpdateTitleScreen from ever returning true while Wizard is selected, so
-// this is never asked to resolve it.
+// is built with.
 const dethnor::CharacterDefinition& PlayerDefinitionFor(dethnor::PlayerClass playerClass,
                                                          const dethnor::ContentLibrary& content) {
     switch (playerClass) {
     case dethnor::PlayerClass::Rogue:
         return content.Character("player_rogue");
-    case dethnor::PlayerClass::Knight:
     case dethnor::PlayerClass::Wizard:
+        return content.Character("player_wizard");
+    case dethnor::PlayerClass::Knight:
         return content.Character("player_knight");
     }
     return content.Character("player_knight");
@@ -86,6 +84,7 @@ int main() {
     // a malformed file throws here, at startup, naming the file and key.
     const dethnor::ContentLibrary content = dethnor::LoadContent(app.ResolveAssetPath("data"));
     const dethnor::CharacterAssetMap characterAssets = dethnor::LoadCharacterAssets(app, content.characters);
+    const dethnor::EffectAssets effectAssets = dethnor::LoadEffectAssets(app, content);
     const dethnor::HudAssets hudAssets = dethnor::LoadHudAssets(app);
     const dethnor::TitleScreenAssets titleAssets = dethnor::LoadTitleScreenAssets(app);
 
@@ -172,7 +171,7 @@ int main() {
         case AppState::Gameplay: {
             const GameplaySession& g = *gameplay;
             app.BeginCameraMode(g.camera.camera);
-            dethnor::DrawLevelRuntime(app, g.level, characterAssets);
+            dethnor::DrawLevelRuntime(app, g.level, characterAssets, effectAssets);
             app.EndCameraMode();
             dethnor::DrawHud(app, g.level.player, session.playerClass, hudAssets);
             break;

@@ -1,0 +1,8 @@
+// data/fx/wizard_recharge.tres (a nameless sub_resource in spells/wizard_recharge.tres). Purely visual,
+// looping (default) for as long as the sustained Recharge spell is held -- fx_frames.tres's
+// "wizard_recharge" clip: MBEU_spell_fx-Recharge.png, 64x64/frame, columns 0-5.
+{
+  "texture": "sprites/fx/MBEU_spell_fx-Recharge.png",
+  "frame_size": [64, 64],
+  "frames": [0, 1, 2, 3, 4, 5]
+}

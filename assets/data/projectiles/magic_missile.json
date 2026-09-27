@@ -1,0 +1,12 @@
+// data/projectiles/magic_missile.tres (ProjectileData). Deals its own direct damage on contact, no
+// fx_on_impact. projectile_frames.tres's "magic_missile" clip: MBEU_projectile_magic_ball-Pulse.png,
+// 16x16/frame, columns 0-3.
+{
+  "texture": "sprites/fx/MBEU_projectile_magic_ball-Pulse.png",
+  "frame_size": [16, 16],
+  "frames": [0, 1, 2, 3],
+  "spawn_frame": 2,
+  "spawn_position": [16, -22],
+  "velocity": [200, 0],
+  "damage": 5
+}

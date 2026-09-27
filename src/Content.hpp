@@ -3,6 +3,7 @@
 #include "ActionDefinition.hpp"
 #include "AIDefinition.hpp"
 #include "CharacterDefinition.hpp"
+#include "EffectDefinition.hpp"
 #include "LevelDefinition.hpp"
 
 #include <filesystem>
@@ -15,15 +16,21 @@ namespace dethnor {
 // asset root's data/ directory -- the game-side replacement for the Godot
 // project's ~120 .tres resources. Layout (id == file stem):
 //
-//   data/actions/<id>.json     ActionData / AttackData / BlockData
+//   data/fx/<id>.json          FXData
+//   data/projectiles/<id>.json ProjectileData (may reference an fx id)
+//   data/actions/<id>.json     ActionData / AttackData / BlockData / SpellData
+//                              (may reference an fx and/or a projectile id)
 //   data/ai/<id>.json          AIConfig
 //   data/characters/<id>.json  CharacterConfig
 //   data/levels/<id>.json      LevelData (with its ZoneData / WaveData inline)
 //
-// Load order is actions -> ai -> characters -> levels because each layer
-// refers to the previous one by id, exactly as .tres resources refer to each
-// other by ext_resource. Files may contain // and /* */ comments (the
-// authored data uses them to record which .tres each value came from).
+// Load order is fx -> projectiles -> actions -> ai -> characters -> levels
+// because each layer refers to the previous ones by id, exactly as .tres
+// resources refer to each other by ext_resource (this chain is a strict DAG,
+// unlike actions' own internal chain references -- see
+// ActionDefinition::pendingChainIds -- so no two-pass resolution is needed
+// here). Files may contain // and /* */ comments (the authored data uses
+// them to record which .tres each value came from).
 //
 // The maps are std::map on purpose: CharacterDefinition::actions/ai and
 // Character::definition/currentAction hold raw pointers into them, so the
@@ -36,6 +43,8 @@ struct ContentLibrary {
     ContentLibrary(ContentLibrary&&) = default;
     ContentLibrary& operator=(ContentLibrary&&) = default;
 
+    std::map<std::string, FxDefinition> fx;
+    std::map<std::string, ProjectileDefinition> projectiles;
     std::map<std::string, ActionDefinition> actions;
     std::map<std::string, AIDefinition> ai;
     std::map<std::string, CharacterDefinition> characters;

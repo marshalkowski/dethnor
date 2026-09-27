@@ -97,14 +97,27 @@ const ActionBinding* TryResolveAction(Character& character) {
 }
 
 void EnterAction(Character& character, const ActionDefinition& action) {
-    character.state = (action.kind == ActionKind::Attack) ? CombatState::Attack : CombatState::Block;
+    character.state = (action.kind == ActionKind::Attack)  ? CombatState::Attack
+                       : (action.kind == ActionKind::Block) ? CombatState::Block
+                                                             : CombatState::Cast;
     character.currentAction = &action;
     character.actionFrameIndex = 0;
     character.actionFrameTime = 0.0f;
     character.actionHitboxWasActive = false;
     character.actionHitTargets.clear();
+    character.actionProjectileSpawned = false;
+    character.actionFxSpawned = false;
+    character.spawnProjectileRequested = false;
+    character.spawnFxRequested = false;
     character.isMoving = false;
+    // Affordability is already checked before EnterAction is ever called
+    // (see UpdateCharacter's Idle/Walk case) -- Godot's own enter() instead
+    // checks it here and aborts the transition entirely on failure, which
+    // leaves the state machine already switched into a half-initialized
+    // state (a genuine soft-lock in the source, not a "feel" quirk worth
+    // reproducing); clamped defensively regardless.
     character.stamina = std::max(0.0f, character.stamina - action.initialStaminaCost);
+    character.magicPoints = std::max(0.0f, character.magicPoints - action.initialMpCost);
 
     // action_data_state.gd's enter(): a Command::None chain queues
     // unconditionally, no buffered input needed at all.
@@ -113,6 +126,18 @@ void EnterAction(Character& character, const ActionDefinition& action) {
         if (chain.command == Command::None) {
             character.nextActionQueued = chain.next;
         }
+    }
+
+    // fx/projectile with a spawn frame of 0 fire immediately on entry (the
+    // same "== current_frame" check that fires every later frame just
+    // happens to already be true at frame 0 here).
+    if (action.fx != nullptr && action.fx->startFrame == 0) {
+        character.spawnFxRequested = true;
+        character.actionFxSpawned = true;
+    }
+    if (action.projectile != nullptr && action.projectile->spawnFrame == 0) {
+        character.spawnProjectileRequested = true;
+        character.actionProjectileSpawned = true;
     }
 }
 
@@ -125,16 +150,32 @@ void UpdateAction(Character& character, const MovementBounds& bounds, float dt) 
     const ActionDefinition& action = *character.currentAction;
 
     if (action.sustainable) {
-        character.stamina -= action.sustainStaminaCostPerSec * dt;
-        if (character.stamina <= 0.0f) {
-            character.stamina = 0.0f;
-            character.state = CombatState::Stunned;
-            character.stunTimeRemaining = 1.0f; // ActionDataState's hardcoded stamina-depletion stun
-            character.currentAction = nullptr;
-            character.hurtAnimation.Restart();
-            return;
+        if (action.sustainStaminaCostPerSec != 0.0f) {
+            character.stamina -= action.sustainStaminaCostPerSec * dt;
+            if (character.stamina <= 0.0f) {
+                character.stamina = 0.0f;
+                character.state = CombatState::Stunned;
+                character.stunTimeRemaining = 1.0f; // ActionDataState's hardcoded depletion stun
+                character.currentAction = nullptr;
+                character.hurtAnimation.Restart();
+                return;
+            }
+            character.staminaRechargeTimer = character.definition->staminaRegenDelay;
         }
-        character.staminaRechargeTimer = character.definition->staminaRegenDelay;
+        if (action.sustainMpCostPerSec != 0.0f) {
+            character.magicPoints = std::clamp(character.magicPoints - action.sustainMpCostPerSec * dt, 0.0f,
+                                                character.definition->maxMagicPoints);
+            // A negative cost (the Wizard's Recharge) only ever gains MP, so
+            // this can never trip -- matching update_magic_points/
+            // ActionDataState's own depletion check exactly regardless.
+            if (character.magicPoints <= 0.0f) {
+                character.state = CombatState::Stunned;
+                character.stunTimeRemaining = 1.0f;
+                character.currentAction = nullptr;
+                character.hurtAnimation.Restart();
+                return;
+            }
+        }
     }
 
     character.actionFrameTime += dt;
@@ -145,6 +186,15 @@ void UpdateAction(Character& character, const MovementBounds& bounds, float dt) 
 
     if (action.givesIframes && character.actionFrameIndex == action.iframesStartFrame) {
         GrantIframes(character);
+    }
+    if (action.projectile != nullptr && !character.actionProjectileSpawned &&
+        character.actionFrameIndex >= action.projectile->spawnFrame) {
+        character.actionProjectileSpawned = true;
+        character.spawnProjectileRequested = true;
+    }
+    if (action.fx != nullptr && !character.actionFxSpawned && character.actionFrameIndex >= action.fx->startFrame) {
+        character.actionFxSpawned = true;
+        character.spawnFxRequested = true;
     }
     if (std::find(action.moveFrames.begin(), action.moveFrames.end(), character.actionFrameIndex) !=
         action.moveFrames.end()) {
@@ -287,13 +337,25 @@ void UpdateCharacter(Character& character, const MovementBounds& bounds, float d
     case CombatState::Idle:
     case CombatState::Walk:
         if (const ActionBinding* binding = TryResolveAction(character)) {
-            EnterAction(character, *binding->action);
+            // Deliberately NOT a faithful reproduction: Godot's own enter()
+            // makes this same check, but AFTER the state machine has already
+            // switched into the new (half-initialized) state, aborting
+            // enter() and leaving the character stuck there -- a soft-lock,
+            // not a "feel" quirk worth keeping. Checked here instead, before
+            // ever transitioning, so an unaffordable input is simply wasted
+            // (the buffered command was already consumed) rather than
+            // freezing the character.
+            if (character.stamina >= binding->action->initialStaminaCost &&
+                character.magicPoints >= binding->action->initialMpCost) {
+                EnterAction(character, *binding->action);
+            }
         } else {
             UpdateMovement(character, bounds, dt);
         }
         break;
     case CombatState::Attack:
     case CombatState::Block:
+    case CombatState::Cast:
         UpdateAction(character, bounds, dt);
         break;
     case CombatState::Knockback:
@@ -323,11 +385,18 @@ engine::Rect HurtboxWorldRect(const Character& character) {
 }
 
 bool IsHitboxActive(const Character& character) {
-    if (character.state != CombatState::Attack || character.currentAction == nullptr) {
+    if (character.currentAction == nullptr) {
         return false;
     }
     const ActionDefinition& action = *character.currentAction;
-    return action.activeFrameStart >= 0 && character.actionFrameIndex >= action.activeFrameStart &&
+    // _apply_attack_frame_logic runs unconditionally for an Attack ("if data
+    // is AttackData or data.use_hitbox") but for Block/Spell only when
+    // useHitbox is explicitly set -- e.g. the Wizard's Light Burst, a
+    // melee-range Spell with its own hitbox and no projectile.
+    const bool eligible = character.state == CombatState::Attack ||
+                          ((character.state == CombatState::Block || character.state == CombatState::Cast) &&
+                           action.useHitbox);
+    return eligible && action.activeFrameStart >= 0 && character.actionFrameIndex >= action.activeFrameStart &&
            character.actionFrameIndex <= action.activeFrameEnd;
 }
 
@@ -412,7 +481,8 @@ void DrawCharacter(engine::Engine& app, const Character& character, const Charac
             frame = character.walkAnimation.CurrentFrameRect();
             break;
         case CombatState::Attack:
-        case CombatState::Block: {
+        case CombatState::Block:
+        case CombatState::Cast: {
             const ActionDefinition& action = *character.currentAction;
             const auto textureIt = assets.actionTextures.find(character.currentAction);
             texture = (textureIt != assets.actionTextures.end()) ? textureIt->second : assets.idleTexture;

@@ -1,0 +1,18 @@
+// data/spells/wizard_fireball.tres (SpellData). "spell_heavy" clip: Spell-Heavy.png, columns 1-20 --
+// a long cast animation; the projectile itself only spawns at frame 10. All hit-related fields zeroed
+// (the cast has no hitbox of its own -- damage comes entirely from the projectile's impact fx).
+{
+  "kind": "spell",
+  "texture": "sprites/characters/wizard/MBEU_character_wizard-Spell-Heavy.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+  "initial_mp_cost": 50.0,
+  "knockback_force": 0.0,
+  "stun_time": 0.0,
+  "hit_stop_duration": 0.0,
+  "hit_freeze_attacker": false,
+  "hit_freeze_target": false,
+  "hitbox_position": [0, 0],
+  "hitbox_size": [0, 0],
+  "projectile": "fireball_bead"
+}

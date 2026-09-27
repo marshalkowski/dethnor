@@ -12,12 +12,19 @@
 
 namespace dethnor {
 
-// Idle/Walk/Attack/Block/Knockback/Stunned/Dead (character_state_machine.gd's
-// state set, minus Cast -- no caster in this milestone). This is the
-// character's own combat state, distinct from an AI's intent (see
-// EnemyAI.hpp): "Attack" here means "I am currently executing an attack
-// action," not "I have decided I want to attack."
-enum class CombatState { Idle, Walk, Attack, Block, Knockback, Stunned, Dead };
+// Idle/Walk/Attack/Block/Cast/Knockback/Stunned/Dead
+// (character_state_machine.gd's full state set). This is the character's own
+// combat state, distinct from an AI's intent (see EnemyAI.hpp): "Attack"
+// here means "I am currently executing an attack action," not "I have
+// decided I want to attack." Cast is mechanically identical to Attack/Block
+// (still an ActionDataState under the hood -- see EnterAction/UpdateAction)
+// but is its own tag because a Spell-kind action doesn't get automatic
+// hitbox-active-frame logic the way an Attack does (see
+// ActionDefinition::useHitbox), and is_blocking()/etc. only care about kind
+// via ActionDefinition::blocks, not this state -- Cast exists purely so
+// drawing/bookkeeping can tell "casting a spell" apart from "swinging a
+// weapon" when it needs to.
+enum class CombatState { Idle, Walk, Attack, Block, Cast, Knockback, Stunned, Dead };
 
 // Walk.gd's turn_threshold -- a script constant in Godot, not a
 // CharacterConfig field, so it applies identically to every character
@@ -47,7 +54,7 @@ struct Character {
 
     CombatState state = CombatState::Idle;
 
-    // Valid only while state == Attack or Block.
+    // Valid only while state == Attack, Block, or Cast.
     const ActionDefinition* currentAction = nullptr;
     int actionFrameIndex = 0;
     float actionFrameTime = 0.0f;
@@ -57,6 +64,20 @@ struct Character {
     // next_action_queued. Consulted only when the current action finishes;
     // nullptr means fall back to Idle as usual.
     const ActionDefinition* nextActionQueued = nullptr;
+    // Rising-edge latches for currentAction->projectile/fx's own spawn
+    // frame (projectile->spawnFrame / fx->startFrame), reset in EnterAction
+    // so a fresh instance of the same action can spawn its effects again.
+    // Character.cpp only tracks WHETHER it's time to spawn (via
+    // spawnProjectileRequested/spawnFxRequested below); LevelRuntime.cpp is
+    // what actually creates the world entity in CombatWorld, keeping
+    // Character.cpp decoupled from CombatWorld entirely, the same way
+    // ResolveAttack already lives outside Character.cpp.
+    bool actionProjectileSpawned = false;
+    bool actionFxSpawned = false;
+    // True for exactly the one frame a spawn should happen; LevelRuntime.cpp
+    // reads and clears these every frame after calling UpdateCharacter.
+    bool spawnProjectileRequested = false;
+    bool spawnFxRequested = false;
     bool actionHitboxWasActive = false; // edge-detects hitbox activation
     // One hit per TARGET per activation, like Godot's Area2D edge trigger --
     // tracked per defender (not a single flag) since M3 added multi-enemy
@@ -67,7 +88,7 @@ struct Character {
     // report). Small vector, not a set: at most a couple of simultaneous
     // targets ever realistically overlap one hitbox.
     std::vector<const Character*> actionHitTargets;
-    bool sustainInputHeld = false; // Block only: is the held key still down this frame
+    bool sustainInputHeld = false; // sustainable Block/Cast only: is the held key still down this frame
 
     float stunTimeRemaining = 0.0f; // set on hit; Knockback consumes it before falling to Stunned
     engine::Vec2 knockbackVelocity{};

@@ -1,0 +1,15 @@
+// data/fx/wizard_fireball_explosion.tres (FXData). fx_frames.tres's
+// "wizard_fireball_explosion" clip: MBEU_spell_fireball-Explosion.png, 128x128/frame, columns 0-11. Spawned
+// by fireball_bead's projectile on impact (or going off-screen) -- this is where the Fireball's real
+// damage actually lives; the bead itself deals none.
+{
+  "texture": "sprites/fx/MBEU_spell_fireball-Explosion.png",
+  "frame_size": [128, 128],
+  "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  "loop": false,
+  "use_hitbox": true,
+  "hitbox_position": [0, -22],
+  "hitbox_size": [20, 20],
+  "hitbox_frames": [2, 3, 4, 5, 6, 7, 8, 9],
+  "damage": 40
+}

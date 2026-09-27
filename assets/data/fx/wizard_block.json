@@ -1,0 +1,8 @@
+// data/fx/wizard_block.tres (a nameless sub_resource in spells/wizard_block.tres). Purely visual, looping
+// (default) for as long as the sustained Block spell is held -- fx_frames.tres's "wizard_block" clip:
+// MBEU_spell_fx-Block.png, 64x64/frame, columns 0-3.
+{
+  "texture": "sprites/fx/MBEU_spell_fx-Block.png",
+  "frame_size": [64, 64],
+  "frames": [0, 1, 2, 3]
+}

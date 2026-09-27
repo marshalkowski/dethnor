@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Command.hpp"
+#include "EffectDefinition.hpp"
 #include "engine/Engine.hpp"
 
 #include <string>
@@ -9,11 +10,17 @@
 
 namespace dethnor {
 
-// AttackData/BlockData (scripts/data/attack_data.gd, block_data.gd) add zero
-// fields beyond their shared ActionData base -- confirmed by reading both in
-// full. A single struct with a kind tag is a faithful, simpler equivalent to
-// the two-subclass hierarchy; nothing is lost by unifying them.
-enum class ActionKind { Attack, Block };
+// AttackData/BlockData/SpellData (scripts/data/attack_data.gd, block_data.gd,
+// spell_data.gd) add zero fields beyond their shared ActionData base --
+// confirmed by reading all three in full. A single struct with a kind tag is
+// a faithful, simpler equivalent to the subclass hierarchy; nothing is lost
+// by unifying them.
+//
+// The kind tag does matter for one thing: _apply_attack_frame_logic only
+// runs unconditionally for AttackData ("if data is AttackData or
+// data.use_hitbox") -- Block and Spell only get hitbox-active-frame logic
+// when useHitbox is explicitly set (see ActionDefinition::useHitbox).
+enum class ActionKind { Attack, Block, Spell };
 
 struct ActionDefinition;
 
@@ -65,6 +72,11 @@ struct ActionDefinition {
     int activeFrameStart = -1;
     int activeFrameEnd = -1;
 
+    // Attack always has hitbox-active-frame logic; Block/Spell only when this
+    // is explicitly set (ActionData.use_hitbox) -- e.g. the Wizard's Light
+    // Burst, a melee-range Spell with its own hitbox and no projectile.
+    bool useHitbox = false;
+
     int damage = 0;
     float knockbackForce = 300.0f; // ActionData.knockback_force default
     float stunTime = 0.2f;         // ActionData.stun_time default
@@ -76,13 +88,24 @@ struct ActionDefinition {
     engine::Vec2 hitboxOffset{};
     engine::Vec2 hitboxSize{};
 
-    float initialStaminaCost = 0.0f;
+    // ActionData.blocks: does this action actually reduce an incoming hit to
+    // stamina damage (facing the attacker), rather than just happening to be
+    // Block-kind? False for Rogue's dodge/roll (which evade via iframes
+    // instead) and true for the Knight's/Wizard's real blocks -- see
+    // base_character.gd's is_blocking(), which checks this flag, not the
+    // character's state.
+    bool blocks = false;
 
-    // Block only: stays active until released rather than until its frames
-    // run out (ActionDataState's exit condition: "(not sustainable and
-    // action_finished) or (sustainable and input released)").
+    float initialStaminaCost = 0.0f;
+    float initialMpCost = 0.0f;
+
+    // Block/Spell only: stays active until released rather than until its
+    // frames run out (ActionDataState's exit condition: "(not sustainable
+    // and action_finished) or (sustainable and input released)").
     bool sustainable = false;
     float sustainStaminaCostPerSec = 0.0f;
+    // Negative means regenerating MP while held (the Wizard's Recharge).
+    float sustainMpCostPerSec = 0.0f;
 
     // BlockData's gives_iframes/iframes_start_frame (e.g. a dodge roll):
     // grants invulnerability partway through the action, for the
@@ -106,6 +129,15 @@ struct ActionDefinition {
     // resolved.
     std::vector<std::pair<Command, std::string>> pendingChainIds;
     std::vector<ActionChain> chains;
+
+    // ActionData.fx/projectile: spawned once, on the rising edge of
+    // actionFrameIndex reaching fx->startFrame / projectile->spawnFrame (see
+    // Character::actionFxSpawned/actionProjectileSpawned and
+    // LevelRuntime.cpp, which owns actually creating them in CombatWorld --
+    // Character.cpp only tracks whether it's time to, matching every other
+    // Character/CombatWorld boundary in this codebase).
+    const FxDefinition* fx = nullptr;
+    const ProjectileDefinition* projectile = nullptr;
 
     int FrameCount() const { return static_cast<int>(frameColumns.size()); }
 };

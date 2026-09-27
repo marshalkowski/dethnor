@@ -1,0 +1,12 @@
+// data/spells/wizard_recharge.tres (SpellData). "block" clip: the Wizard's own Block.png, columns 1-3.
+// Sustainable with a NEGATIVE mp cost -- channeling this actually regenerates mana instead of spending it
+// -- plus a looping visual fx for as long as it's held.
+{
+  "kind": "spell",
+  "texture": "sprites/characters/wizard/MBEU_character_wizard-Block.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3],
+  "sustainable": true,
+  "sustain_mp_cost_per_sec": -10.0,
+  "fx": "wizard_recharge"
+}

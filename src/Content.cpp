@@ -78,11 +78,61 @@ Command CommandFrom(const std::string& name) {
     throw std::runtime_error("unknown command \"" + name + "\"");
 }
 
-// --- ActionData / AttackData / BlockData --------------------------------
+// --- FXData / ProjectileData ---------------------------------------------
+
+// Field names follow the Godot resources (fx_data.gd/projectile_data.gd).
+FxDefinition ParseFx(const json& j) {
+    FxDefinition fx;
+    fx.textureAsset = j.at("texture").get<std::string>();
+    const engine::Vec2 frameSize = Vec2From(j.at("frame_size"));
+    fx.frameWidth = frameSize.x;
+    fx.frameHeight = frameSize.y;
+    fx.frameColumns = j.at("frames").get<std::vector<int>>();
+    if (fx.frameColumns.empty()) {
+        throw std::runtime_error("\"frames\" must not be empty");
+    }
+    fx.frameDuration = Opt(j, "frame_rate", 0.05f);
+    fx.loop = Opt(j, "loop", true);
+    fx.startFrame = Opt(j, "start_frame", 0);
+    fx.useHitbox = Opt(j, "use_hitbox", false);
+    fx.hitboxOffset = OptVec2(j, "hitbox_position", {0.0f, 0.0f});
+    fx.hitboxSize = OptVec2(j, "hitbox_size", {0.0f, 0.0f});
+    fx.hitboxFrames = Opt(j, "hitbox_frames", std::vector<int>{});
+    fx.damage = Opt(j, "damage", 0);
+    return fx;
+}
+
+ProjectileDefinition ParseProjectile(const json& j, const ContentLibrary& library) {
+    ProjectileDefinition projectile;
+    projectile.textureAsset = j.at("texture").get<std::string>();
+    const engine::Vec2 frameSize = Vec2From(j.at("frame_size"));
+    projectile.frameWidth = frameSize.x;
+    projectile.frameHeight = frameSize.y;
+    projectile.frameColumns = j.at("frames").get<std::vector<int>>();
+    if (projectile.frameColumns.empty()) {
+        throw std::runtime_error("\"frames\" must not be empty");
+    }
+    projectile.frameDuration = Opt(j, "frame_rate", 0.05f);
+    projectile.spawnFrame = Opt(j, "spawn_frame", 0);
+    projectile.spawnPosition = OptVec2(j, "spawn_position", {0.0f, 0.0f});
+    projectile.velocity = OptVec2(j, "velocity", {1.0f, 0.0f});
+    projectile.damage = Opt(j, "damage", 0);
+    if (j.contains("fx_on_impact")) {
+        const std::string fxId = j.at("fx_on_impact").get<std::string>();
+        const auto it = library.fx.find(fxId);
+        if (it == library.fx.end()) {
+            throw std::runtime_error("unknown fx \"" + fxId + "\"");
+        }
+        projectile.fxOnImpact = &it->second;
+    }
+    return projectile;
+}
+
+// --- ActionData / AttackData / BlockData / SpellData ---------------------
 
 // Field names follow the Godot resource (action_data.gd) so a .tres can be
 // transcribed key for key; defaults are ActionData's own.
-ActionDefinition ParseAction(const json& j) {
+ActionDefinition ParseAction(const json& j, const ContentLibrary& library) {
     ActionDefinition action;
 
     const std::string kind = j.at("kind").get<std::string>();
@@ -90,8 +140,10 @@ ActionDefinition ParseAction(const json& j) {
         action.kind = ActionKind::Attack;
     } else if (kind == "block") {
         action.kind = ActionKind::Block;
+    } else if (kind == "spell") {
+        action.kind = ActionKind::Spell;
     } else {
-        throw std::runtime_error("kind must be \"attack\" or \"block\", got \"" + kind + "\"");
+        throw std::runtime_error("kind must be \"attack\", \"block\", or \"spell\", got \"" + kind + "\"");
     }
 
     action.textureAsset = j.at("texture").get<std::string>();
@@ -122,6 +174,7 @@ ActionDefinition ParseAction(const json& j) {
         action.activeFrameEnd = active.back();
     }
 
+    action.useHitbox = Opt(j, "use_hitbox", false);
     action.damage = Opt(j, "damage", 0);
     action.knockbackForce = Opt(j, "knockback_force", 300.0f);
     action.stunTime = Opt(j, "stun_time", 0.2f);
@@ -130,14 +183,34 @@ ActionDefinition ParseAction(const json& j) {
     action.hitFreezeTarget = Opt(j, "hit_freeze_target", true);
     action.hitboxOffset = OptVec2(j, "hitbox_position", {15.0f, -25.0f});
     action.hitboxSize = OptVec2(j, "hitbox_size", {10.0f, 10.0f});
+    action.blocks = Opt(j, "blocks", false);
     action.initialStaminaCost = Opt(j, "initial_stamina_cost", 0.0f);
+    action.initialMpCost = Opt(j, "initial_mp_cost", 0.0f);
     action.sustainable = Opt(j, "sustainable", false);
     action.sustainStaminaCostPerSec = Opt(j, "sustain_stamina_cost_per_sec", 0.0f);
+    action.sustainMpCostPerSec = Opt(j, "sustain_mp_cost_per_sec", 0.0f);
 
     action.givesIframes = Opt(j, "gives_iframes", false);
     action.iframesStartFrame = Opt(j, "iframes_start_frame", 0);
     action.moveVector = OptVec2(j, "move_vector", {0.0f, 0.0f});
     action.moveFrames = Opt(j, "move_frames", std::vector<int>{});
+
+    if (j.contains("fx")) {
+        const std::string fxId = j.at("fx").get<std::string>();
+        const auto it = library.fx.find(fxId);
+        if (it == library.fx.end()) {
+            throw std::runtime_error("unknown fx \"" + fxId + "\"");
+        }
+        action.fx = &it->second;
+    }
+    if (j.contains("projectile")) {
+        const std::string projectileId = j.at("projectile").get<std::string>();
+        const auto it = library.projectiles.find(projectileId);
+        if (it == library.projectiles.end()) {
+            throw std::runtime_error("unknown projectile \"" + projectileId + "\"");
+        }
+        action.projectile = &it->second;
+    }
 
     // "chains": {"light": "rogue_slash_2", ...} -- command name -> action id.
     // The target may not have loaded yet (ContentLibrary::actions loads in
@@ -470,7 +543,10 @@ const LevelDefinition& ContentLibrary::Level(int world, int level) const {
 
 ContentLibrary LoadContent(const fs::path& dataRoot) {
     ContentLibrary library;
-    LoadDirectory(dataRoot / "actions", library.actions, [](const json& j) { return ParseAction(j); });
+    LoadDirectory(dataRoot / "fx", library.fx, [](const json& j) { return ParseFx(j); });
+    LoadDirectory(dataRoot / "projectiles", library.projectiles,
+                  [&library](const json& j) { return ParseProjectile(j, library); });
+    LoadDirectory(dataRoot / "actions", library.actions, [&library](const json& j) { return ParseAction(j, library); });
     ResolveActionChains(library);
     LoadDirectory(dataRoot / "ai", library.ai, [](const json& j) { return ParseAI(j); });
     LoadDirectory(dataRoot / "characters", library.characters,

@@ -279,12 +279,33 @@ LevelRuntime BuildLevelRuntime(const Destination& destination, const SessionStat
     return level;
 }
 
+// Character.cpp only tracks whether an action's projectile/fx should spawn
+// this frame (spawnProjectileRequested/spawnFxRequested); actually creating
+// the world entity is LevelRuntime's job, the same boundary ResolveAttack
+// already draws between per-character update and cross-character combat
+// resolution.
+void ConsumeEffectSpawns(Character& character, CombatWorld& world) {
+    if (character.spawnProjectileRequested) {
+        character.spawnProjectileRequested = false;
+        SpawnProjectile(world, *character.currentAction->projectile, character.position, character.facing);
+    }
+    if (character.spawnFxRequested) {
+        character.spawnFxRequested = false;
+        // A caster-attached fx (e.g. the Wizard's Block/Recharge aura)
+        // follows its caster and auto-finishes when the caster leaves the
+        // action that spawned it -- see UpdateFx.
+        SpawnFx(world, *character.currentAction->fx, character.position, character.facing, &character,
+               character.currentAction);
+    }
+}
+
 std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
     const CharacterDefinition& playerDefinition = *level.player.definition;
     const MovementBounds playerBounds = ComputeMovementBounds(level, level.player.position,
                                                                 playerDefinition.collisionHalfWidth,
                                                                 playerDefinition.collisionTopOffset);
     UpdateCharacter(level.player, playerBounds, dt);
+    ConsumeEffectSpawns(level.player, level.combatWorld);
 
     for (ZoneRuntime& zone : level.zones) {
         for (EnemyInstance& enemy : zone.enemies) {
@@ -296,6 +317,7 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
                 level, enemy.character.position, enemyDefinition.collisionHalfWidth,
                 enemyDefinition.collisionTopOffset);
             UpdateCharacter(enemy.character, enemyBounds, dt);
+            ConsumeEffectSpawns(enemy.character, level.combatWorld);
         }
     }
 
@@ -305,6 +327,19 @@ std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt) {
             ResolveAttack(enemy.character, level.player, level.combatWorld);
         }
     }
+
+    std::vector<Character*> combatTargets;
+    combatTargets.push_back(&level.player);
+    for (ZoneRuntime& zone : level.zones) {
+        for (EnemyInstance& enemy : zone.enemies) {
+            combatTargets.push_back(&enemy.character);
+        }
+    }
+    float cameraMinX = 0.0f;
+    float cameraMaxX = 0.0f;
+    GetCameraBounds(level, cameraMinX, cameraMaxX);
+    UpdateProjectiles(level.combatWorld, combatTargets, (cameraMinX + cameraMaxX) * 0.5f, screenWidth, dt);
+    UpdateFx(level.combatWorld, combatTargets, dt);
     UpdateCombatWorld(level.combatWorld, dt);
 
     for (ZoneRuntime& zone : level.zones) {
@@ -347,7 +382,8 @@ void GetCameraBounds(const LevelRuntime& level, float& outMinX, float& outMaxX) 
     outMaxX = maxX;
 }
 
-void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets) {
+void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets,
+                      const EffectAssets& effectAssets) {
     const LevelTextures& textures = *level.textures;
     const float bgWidth = static_cast<float>(app.TextureWidth(textures.background));
     for (const ZoneRuntime& zone : level.zones) {
@@ -419,7 +455,7 @@ void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const Char
         DrawCharacter(app, *entry.character, *entry.assets, kDebugDrawHitboxes);
     }
 
-    DrawCombatWorld(app, level.combatWorld);
+    DrawCombatWorld(app, level.combatWorld, effectAssets);
 }
 
 } // namespace dethnor

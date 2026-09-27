@@ -1,0 +1,13 @@
+// data/projectiles/fireball_bead.tres (ProjectileData). No damage of its own -- fx_on_impact
+// (wizard_fireball_explosion) is where the Fireball's real damage lives. projectile_frames.tres's
+// "fireball_bead" clip: MBEU_projectile_magic_ball-FireballBead.png, 16x16/frame, columns 0-2.
+{
+  "texture": "sprites/fx/MBEU_projectile_magic_ball-FireballBead.png",
+  "frame_size": [16, 16],
+  "frames": [0, 1, 2],
+  "frame_rate": 0.75,
+  "spawn_frame": 10,
+  "spawn_position": [16, -22],
+  "velocity": [200, 0],
+  "fx_on_impact": "wizard_fireball_explosion"
+}

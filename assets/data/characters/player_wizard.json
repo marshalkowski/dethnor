@@ -1,0 +1,25 @@
+// data/character_configs/players/player_wizard.tres. Overrides frames/actions/max_magic_points; everything
+// else (collision/hurtbox/stamina/speed/knockback/iframes/max_hit_points) is a CharacterConfig default,
+// same as the Knight's and Rogue's own configs.
+{
+  "max_magic_points": 100,
+  "sprite_frame_size": [128, 64],
+  "animations": {
+    // wizard_frames.tres: "idle" 6 frames speed=5; "walk" 6 frames speed=5
+    "idle":      { "texture": "sprites/characters/wizard/MBEU_character_wizard-Idle-6.png", "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "walk":      { "texture": "sprites/characters/wizard/MBEU_character_wizard-Walk.png",   "first_frame": 0, "frame_count": 6, "fps": 5.0 },
+    "knockback": { "texture": "sprites/characters/wizard/MBEU_character_wizard-Hit.png",    "first_frame": 1, "frame_count": 1, "fps": 1.0 },
+    // "fall" (Fall.png): 4 frames at columns 1-4, speed=10
+    "fall":      { "texture": "sprites/characters/wizard/MBEU_character_wizard-Fall.png",   "first_frame": 1, "frame_count": 4, "fps": 10.0 }
+  },
+  // Order is real tie-break priority: each directional variant (heavy_forward, block_back, light_up) is
+  // checked before its own base command (heavy, block, light), matching the Knight's/Rogue's own pattern.
+  "actions": [
+    { "command": "heavy_forward", "action": "wizard_fireball" },
+    { "command": "heavy",         "action": "wizard_overhead" },
+    { "command": "block_back",    "action": "wizard_recharge" },
+    { "command": "block",         "action": "wizard_block" },
+    { "command": "light_up",      "action": "wizard_magic_missile" },
+    { "command": "light",         "action": "wizard_light_burst" }
+  ]
+}

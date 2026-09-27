@@ -1,0 +1,13 @@
+// data/spells/wizard_block.tres (SpellData). Shares the "block" clip with Recharge (a different
+// resource). The Wizard's real defensive stance -- blocks=true, unlike Rogue's dodge/roll -- sustained at
+// a real mp cost, plus a looping visual fx for as long as it's held.
+{
+  "kind": "spell",
+  "texture": "sprites/characters/wizard/MBEU_character_wizard-Block.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3],
+  "sustainable": true,
+  "sustain_mp_cost_per_sec": 10.0,
+  "blocks": true,
+  "fx": "wizard_block"
+}

@@ -121,7 +121,8 @@ void LoadLevelTextures(LevelRuntime& level, engine::Engine& app);
 std::optional<Destination> UpdateLevelRuntime(LevelRuntime& level, float dt);
 
 // World-space only -- call between BeginCameraMode/EndCameraMode.
-void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets);
+void DrawLevelRuntime(engine::Engine& app, const LevelRuntime& level, const CharacterAssetMap& assets,
+                      const EffectAssets& effectAssets);
 
 // LevelCamera.gd's get_current_x_bounds(): the active zone's own span while
 // an encounter is in progress, or the full explored span otherwise.

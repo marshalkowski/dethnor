@@ -42,16 +42,13 @@ void DrawMeter(engine::Engine& app, engine::TextureHandle label, engine::Texture
 } // namespace
 
 HudAssets LoadHudAssets(engine::Engine& app) {
-    // Indexed by PlayerClass (Knight/Wizard/Rogue) -- Wizard's own art isn't
-    // ported yet (M5 is still mid-flight), so it reuses the Knight's in the
-    // meantime; DrawHud will never actually be asked to draw it before
-    // Wizard is selectable.
+    // Indexed by PlayerClass (Knight/Wizard/Rogue).
     return HudAssets{
         .avatarFrame = {app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_knight.png"),
-                         app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_knight.png"),
+                         app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_wizard.png"),
                          app.LoadTexture("sprites/ui/MBEU_ui_avatar_frame_rogue.png")},
         .playerName = {app.LoadTexture("sprites/ui/MBEU_ui_player_name_knight.png"),
-                        app.LoadTexture("sprites/ui/MBEU_ui_player_name_knight.png"),
+                        app.LoadTexture("sprites/ui/MBEU_ui_player_name_wizard.png"),
                         app.LoadTexture("sprites/ui/MBEU_ui_player_name_rogue.png")},
         .labelHp = app.LoadTexture("sprites/ui/MBEU_ui_label_hp.png"),
         .labelStamina = app.LoadTexture("sprites/ui/MBEU_ui_label_stamina.png"),
