@@ -1,0 +1,13 @@
+// data/attacks/shield_bash.tres (AttackData). "strike_2" clip: Strike-Rear.png, columns 1-4. A stagger,
+// not a hit -- no damage (default 0), but the default 300 knockback_force and a full 1s stun still apply.
+// Reached only as sword_slash_2's Block-press chain branch.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/knight/MBEU_character_knight-Strike-Rear.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4],
+  "active_frames": [2, 3],
+  "stun_time": 1.0,
+  "hitbox_position": [25, -25],
+  "hitbox_size": [10, 20]
+}

@@ -1,0 +1,15 @@
+// data/attacks/sword_stab.tres (AttackData). "strike" clip: Strike-Fwd.png, columns 1-4 -- the same
+// clip knight_quick_stab uses, but this is a DIFFERENT resource (heavier damage/knockback), reached only
+// as sword_slash_3's chain terminal, not bound to any command directly.
+{
+  "kind": "attack",
+  "texture": "sprites/characters/knight/MBEU_character_knight-Strike-Fwd.png",
+  "frame_size": [128, 64],
+  "frames": [1, 2, 3, 4],
+  "active_frames": [1, 2, 3],
+  "damage": 20,
+  "knockback_force": 60.0,
+  "stun_time": 0.4,
+  "hitbox_position": [30, -24],
+  "hitbox_size": [22, 14]
+}

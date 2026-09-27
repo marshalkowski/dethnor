@@ -12,18 +12,6 @@ float Sign(float value) {
     return 0.0f;
 }
 
-// Finds the action-table index of action within def's bound actions, for
-// mapping a currently-playing action back to its pre-loaded texture in
-// CharacterAssets::actionTextures (same order, built in LoadCharacterAssets).
-int ActionTextureIndex(const CharacterDefinition& def, const ActionDefinition* action) {
-    for (std::size_t i = 0; i < def.actions.size(); ++i) {
-        if (def.actions[i].action == action) {
-            return static_cast<int>(i);
-        }
-    }
-    return -1;
-}
-
 // A plain min/max clamp against bounds -- the always-on part (top wall,
 // floor, gates/outer zone edge). Diagonal walls need the sliding treatment
 // in UpdateMovement instead (a plain post-hoc clamp there would let the
@@ -355,10 +343,26 @@ CharacterAssets LoadCharacterAssets(engine::Engine& app, const CharacterDefiniti
     // TextureHandle has no default constructor (see Engine.hpp), so
     // CharacterAssets can't be default-constructed then filled in --
     // everything is gathered first and returned via aggregate init instead.
-    std::vector<engine::TextureHandle> actionTextures;
-    actionTextures.reserve(def.actions.size());
+    //
+    // Loads every action reachable from a bound one, not just the bound ones
+    // themselves: a chain (see ActionDefinition::chains) can lead into an
+    // action nothing binds directly (the Knight's sword_slash_2/3, reached
+    // only through sword_slash_1's chain).
+    std::map<const ActionDefinition*, engine::TextureHandle> actionTextures;
+    std::vector<const ActionDefinition*> pending;
     for (const ActionBinding& binding : def.actions) {
-        actionTextures.push_back(app.LoadTexture(binding.action->textureAsset.c_str()));
+        pending.push_back(binding.action);
+    }
+    while (!pending.empty()) {
+        const ActionDefinition* action = pending.back();
+        pending.pop_back();
+        if (actionTextures.find(action) != actionTextures.end()) {
+            continue;
+        }
+        actionTextures.emplace(action, app.LoadTexture(action->textureAsset.c_str()));
+        for (const ActionChain& chain : action->chains) {
+            pending.push_back(chain.next);
+        }
     }
     return CharacterAssets{
         .idleTexture = app.LoadTexture(def.idleAsset.c_str()),
@@ -410,8 +414,8 @@ void DrawCharacter(engine::Engine& app, const Character& character, const Charac
         case CombatState::Attack:
         case CombatState::Block: {
             const ActionDefinition& action = *character.currentAction;
-            const int index = ActionTextureIndex(*character.definition, character.currentAction);
-            texture = (index >= 0) ? assets.actionTextures[static_cast<std::size_t>(index)] : assets.idleTexture;
+            const auto textureIt = assets.actionTextures.find(character.currentAction);
+            texture = (textureIt != assets.actionTextures.end()) ? textureIt->second : assets.idleTexture;
             const int frameIndex = std::min(character.actionFrameIndex, action.FrameCount() - 1);
             const int column = action.frameColumns[static_cast<std::size_t>(frameIndex)];
             frame = engine::Rect{static_cast<float>(column) * action.frameWidth, 0.0f, action.frameWidth,

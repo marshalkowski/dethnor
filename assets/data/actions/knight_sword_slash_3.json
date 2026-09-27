@@ -1,5 +1,6 @@
-// data/attacks/sword_slash_1.tres (AttackData). "slash_1_smear" clip: LSlash-1-smear.png, 4 frames at
-// columns 1-4. Chains into sword_slash_2 on a further Light press (M5 moveset work).
+// data/attacks/sword_slash_3.tres (AttackData). Reuses "slash_1_smear" (the same clip as sword_slash_1 --
+// the third hit visually repeats the first swing). Reached only via sword_slash_2's chain. Chains into
+// sword_stab on a further Heavy press.
 {
   "kind": "attack",
   "texture": "sprites/characters/knight/MBEU_character_knight-LSlash-1-smear.png",
@@ -11,5 +12,5 @@
   "stun_time": 0.4,
   "hitbox_position": [33, -22.5],
   "hitbox_size": [15, 45],
-  "chains": { "light": "knight_sword_slash_2" }
+  "chains": { "heavy": "knight_sword_stab" }
 }

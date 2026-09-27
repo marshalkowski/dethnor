@@ -1,0 +1,16 @@
+// data/attacks/sword_slash_2.tres (AttackData). "slash_2_smear" clip: LSlash-2-smear.png, 4 frames at
+// columns 0-3. Reached only via sword_slash_1's chain. Chains into sword_slash_3 on a further Light
+// press, or into shield_bash on a Block press instead (a branch, not a single line).
+{
+  "kind": "attack",
+  "texture": "sprites/characters/knight/MBEU_character_knight-LSlash-2-smear.png",
+  "frame_size": [128, 64],
+  "frames": [0, 1, 2, 3],
+  "active_frames": [1, 2],
+  "damage": 5,
+  "knockback_force": 25.0,
+  "stun_time": 0.4,
+  "hitbox_position": [33, -22.5],
+  "hitbox_size": [15, 45],
+  "chains": { "light": "knight_sword_slash_3", "block": "knight_shield_bash" }
+}

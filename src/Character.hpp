@@ -160,8 +160,11 @@ struct CharacterAssets {
     engine::TextureHandle deathTexture;
     // Same as idleTexture for a character with no "dormant" animation.
     engine::TextureHandle dormantTexture;
-    // Parallel to CharacterDefinition::actions.
-    std::vector<engine::TextureHandle> actionTextures;
+    // Every action reachable from CharacterDefinition::actions, directly
+    // bound or only reachable through a chain (e.g. the Knight's own
+    // sword_slash_2/3 -- see ActionDefinition::chains) -- a chained action's
+    // texture is looked up here the same way a directly-bound one is.
+    std::map<const ActionDefinition*, engine::TextureHandle> actionTextures;
 };
 
 CharacterAssets LoadCharacterAssets(engine::Engine& app, const CharacterDefinition& def);
